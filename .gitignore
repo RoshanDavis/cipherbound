@@ -1,0 +1,13 @@
+# Godot
+.godot/
+*.import
+export_presets.cfg
+
+# Python
+__pycache__/
+venv/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/
