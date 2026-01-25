@@ -41,19 +41,18 @@ func _process(delta):
 		
 		if error == OK:
 			var data = json.data
-			# Verify data is a Dictionary before accessing keys
-			if typeof(data) != TYPE_DICTIONARY:
-				return
-			if data.has("has_face") and data["has_face"]:
-				if data.has("head_x") and data.has("head_y"):
-					var head_x = data["head_x"]
-					var head_y = data["head_y"]
-					if typeof(head_x) in [TYPE_FLOAT, TYPE_INT] and typeof(head_y) in [TYPE_FLOAT, TYPE_INT]:
-						update_target_rotation(head_x, head_y)
+			# Only process if data is a valid Dictionary
+			if typeof(data) == TYPE_DICTIONARY:
+				if data.has("has_face") and data["has_face"]:
+					if data.has("head_x") and data.has("head_y"):
+						var head_x = data["head_x"]
+						var head_y = data["head_y"]
+						if typeof(head_x) in [TYPE_FLOAT, TYPE_INT] and typeof(head_y) in [TYPE_FLOAT, TYPE_INT]:
+							update_target_rotation(head_x, head_y)
+						else:
+							printerr("Invalid head_x or head_y type in vision data")
 					else:
-						printerr("Invalid head_x or head_y type in vision data")
-				else:
-					printerr("Missing head_x or head_y in vision data")
+						printerr("Missing head_x or head_y in vision data")
 
 	# 3. Smoothly move the camera towards the target
 	# We use 'lerp' (Linear Interpolation) to filter out webcam jitter
