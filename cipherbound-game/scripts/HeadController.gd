@@ -22,8 +22,12 @@ func _ready():
 		printerr("Failed to listen on port " + str(port))
 	else:
 		print("Cipherbound Client listening on port " + str(port))
-
-func _process(_delta):
+func _exit_tree():
+	# Stop the UDP server and release the port when node is freed
+	if server:
+		server.stop()
+		print("HeadController UDP server stopped")
+func _process(delta):
 	# 1. Check for new data packets
 	server.poll()
 	if server.is_connection_available():
@@ -53,8 +57,10 @@ func _process(_delta):
 
 	# 3. Smoothly move the camera towards the target
 	# We use 'lerp' (Linear Interpolation) to filter out webcam jitter
-	rotation.y = lerp_angle(rotation.y, target_rotation.y, smoothing)
-	rotation.x = lerp_angle(rotation.x, target_rotation.x, smoothing)
+	# Frame-rate independent smoothing: t = 1 - (1 - smoothing) ^ delta
+	var t = 1.0 - pow(1.0 - smoothing, delta * 60.0)  # Normalized to 60 FPS baseline
+	rotation.y = lerp_angle(rotation.y, target_rotation.y, t)
+	rotation.x = lerp_angle(rotation.x, target_rotation.x, t)
 
 func update_target_rotation(nose_x: float, nose_y: float):
 	# Map the 0.0-1.0 range to angles (Radians)
