@@ -18,6 +18,11 @@ from trackers import LookTracker, StrafeTracker, DepthTracker
 
 def main():
     # --- NETWORK SETUP ---
+    """
+    Run the vision processing loop: capture frames from the configured webcam, process them with MediaPipe Holistic to detect face and pose landmarks, update LookTracker, StrafeTracker, and DepthTracker to compute look/lean control values, and send a data packet over UDP each frame.
+    
+    The loop marks presence of face/body, updates calibration status, and supports recalibration when the user presses "R" and graceful exit with "ESC". When DEBUG_MODE is enabled, draw_debug is used to render overlays and a preview window. All resources (video capture, MediaPipe processor, UDP sender, and OpenCV windows) are released on exit.
+    """
     sender = UDPSender()
     
     # --- MEDIAPIPE SETUP ---
@@ -131,7 +136,19 @@ def main():
 
 
 def draw_debug(image, results, data_packet, look_tracker, strafe_tracker, depth_tracker, body_offset, mp_holistic):
-    """Draw debug visualization on the image."""
+    """
+    Render debug overlays onto the provided BGR image showing calibration progress and visualizations for face, look, depth, and body tracking.
+    
+    Parameters:
+        image (numpy.ndarray): BGR image buffer to draw overlays on (modified in place).
+        results: MediaPipe Holistic processing result containing face and pose landmarks.
+        data_packet (dict): Current control/state values (e.g., 'calibrated', 'look_x', 'look_y', 'lean_x', 'lean_y') used for on-screen text.
+        look_tracker: LookTracker instance used to obtain adjusted look center and calibration progress.
+        strafe_tracker: StrafeTracker instance used for body-center visualization and calibration state.
+        depth_tracker: DepthTracker instance used for depth calibration progress.
+        body_offset (tuple | None): Current body offset applied when computing adjusted look center, or None if unavailable.
+        mp_holistic: MediaPipe Holistic module (used for landmark enums).
+    """
     h, w, _ = image.shape
     
     # Check if still calibrating

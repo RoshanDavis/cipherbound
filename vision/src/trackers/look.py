@@ -11,12 +11,21 @@ class LookTracker(BaseTracker):
     """
     
     def __init__(self):
+        """
+        Initialize the LookTracker and set its deadzone and maximum radius from configuration.
+        
+        Calls the BaseTracker initializer, then sets `deadzone` to LOOK_DEADZONE_RADIUS and `max_radius` to LOOK_MAX_RADIUS.
+        """
         super().__init__()
         self.deadzone = LOOK_DEADZONE_RADIUS
         self.max_radius = LOOK_MAX_RADIUS
     
     def _complete_calibration(self):
-        """Average all nose samples to find center."""
+        """
+        Compute the average of collected calibration samples and store it as the calibrated center.
+        
+        Sets self.calibrated_value to a (x, y) tuple representing the mean nose position from self.calibration_samples. Also prints a brief confirmation message with the computed center coordinates.
+        """
         avg_x = sum(s[0] for s in self.calibration_samples) / len(self.calibration_samples)
         avg_y = sum(s[1] for s in self.calibration_samples) / len(self.calibration_samples)
         self.calibrated_value = (avg_x, avg_y)
@@ -25,15 +34,18 @@ class LookTracker(BaseTracker):
     def process(self, nose_x: float, nose_y: float, 
                 body_offset: Tuple[float, float] = (0.0, 0.0)) -> dict:
         """
-        Process nose position and return look values.
-        
-        Args:
-            nose_x, nose_y: Normalized nose position (0-1)
-            body_offset: Body movement offset to compensate for leaning
-            
-        Returns:
-            dict with 'look_x' and 'look_y' (-1 to 1)
-        """
+                Convert a nose position into a normalized look vector representing camera direction.
+                
+                If the tracker is still calibrating, the current sample is recorded and (0.0, 0.0) is returned. Once calibrated, the calibrated center is adjusted by `body_offset`; the nose offset from that center is interpreted like a joystick: offsets within the deadzone produce no movement, and offsets between the deadzone edge and `max_radius` are scaled to a magnitude in [0, 1] along the computed angle.
+                
+                Parameters:
+                    nose_x (float): Normalized nose X position.
+                    nose_y (float): Normalized nose Y position.
+                    body_offset (Tuple[float, float], optional): X/Y offset to apply to the calibrated center to compensate for body lean. Defaults to (0.0, 0.0).
+                
+                Returns:
+                    dict: A mapping with keys `look_x` and `look_y` containing scaled look values in the range [-1.0, 1.0]. When inside the deadzone or during calibration, both values are 0.0.
+                """
         result = {"look_x": 0.0, "look_y": 0.0}
         
         # Calibration phase
@@ -74,7 +86,15 @@ class LookTracker(BaseTracker):
         return result
     
     def get_adjusted_center(self, body_offset: Tuple[float, float] = (0.0, 0.0)) -> Optional[Tuple[float, float]]:
-        """Get the current adjusted center point for debug drawing."""
+        """
+        Get the calibrated center point adjusted by an optional body offset.
+        
+        Parameters:
+            body_offset (Tuple[float, float]): (x, y) offset to apply to the calibrated center to compensate for body position.
+        
+        Returns:
+            adjusted_center (Optional[Tuple[float, float]]): Adjusted (x, y) center coordinates if calibration is complete, otherwise `None`.
+        """
         if not self.is_calibrated:
             return None
         return (

@@ -16,18 +16,37 @@ class DepthTracker(BaseTracker):
     RIGHT_EYE_OUTER = 263  # Right eye outer corner
     
     def __init__(self):
+        """
+        Initialize the DepthTracker and apply depth configuration.
+        
+        Initializes the base tracker state and sets the tracker-specific parameters:
+        - deadzone: threshold within which small depth changes are ignored (from DEPTH_DEADZONE).
+        - max_change: maximum relative change used to scale depth movement (from DEPTH_MAX).
+        """
         super().__init__()
         self.deadzone = DEPTH_DEADZONE
         self.max_change = DEPTH_MAX
     
     def _complete_calibration(self):
-        """Average all eye distance samples to find neutral distance."""
+        """
+        Set the tracker's calibrated neutral eye distance by averaging collected calibration samples.
+        
+        Calculates the mean of self.calibration_samples, stores it in self.calibrated_value, and emits a console message with the calibrated distance.
+        """
         avg_distance = sum(self.calibration_samples) / len(self.calibration_samples)
         self.calibrated_value = avg_distance
         print(f"Depth Calibrated! Neutral eye distance: {avg_distance:.4f}")
     
     def calculate_eye_distance(self, face_landmarks) -> float:
-        """Calculate normalized distance between outer eye corners."""
+        """
+        Compute the Euclidean distance between the outer corners of the left and right eyes.
+        
+        Parameters:
+            face_landmarks: An object with a `landmark` sequence of normalized points (x, y) such as MediaPipe face landmarks. The landmarks at indices LEFT_EYE_OUTER and RIGHT_EYE_OUTER are used.
+        
+        Returns:
+            distance (float): Euclidean distance between the two eye landmarks in normalized landmark coordinates (x/y space).
+        """
         left_eye = face_landmarks.landmark[self.LEFT_EYE_OUTER]
         right_eye = face_landmarks.landmark[self.RIGHT_EYE_OUTER]
         
@@ -40,13 +59,16 @@ class DepthTracker(BaseTracker):
     
     def process(self, face_landmarks) -> dict:
         """
-        Process face landmarks and return depth/forward movement.
+        Estimate forward/backward movement from face landmarks by comparing current eye distance to the calibrated neutral.
         
-        Args:
-            face_landmarks: MediaPipe face landmarks
-            
+        Parameters:
+            face_landmarks: MediaPipe face landmarks object or None. When None, no measurement is produced and defaults are returned.
+        
         Returns:
-            dict with 'lean_y' (-1 to 1): negative = back, positive = forward
+            dict: {
+                'lean_y': float — Signed magnitude in the range [-1, 1] representing forward/backward movement (positive = forward/closer, negative = backward/farther),
+                'eye_distance': float — Euclidean distance between the left and right outer eye landmarks (current measurement)
+            }
         """
         result = {"lean_y": 0.0, "eye_distance": 0.0}
         
@@ -91,7 +113,15 @@ class DepthTracker(BaseTracker):
         return result
     
     def get_debug_info(self) -> dict:
-        """Get debug information for visualization."""
+        """
+        Return internal calibration and configuration values useful for debugging visualizations.
+        
+        Returns:
+            dict: Mapping with keys:
+                - calibrated_distance (float): Calibrated neutral eye distance.
+                - deadzone (float): Deadzone threshold applied to relative change.
+                - max_change (float): Maximum relative change used to map eye-distance change to lean.
+        """
         return {
             "calibrated_distance": self.calibrated_value,
             "deadzone": self.deadzone,
