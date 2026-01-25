@@ -11,13 +11,27 @@ class StrafeTracker(BaseTracker):
     """
     
     def __init__(self):
+        """
+        Initialize a StrafeTracker with calibration and movement bounds.
+        
+        Sets the deadzone and maximum movement radius from module constants and initializes the current body offset to (0.0, 0.0) for use by other trackers.
+        
+        Attributes:
+            deadzone (float): Radius within which horizontal offset is ignored.
+            max_radius (float): Maximum radius used to normalize horizontal offset into a signed magnitude.
+            current_offset (Tuple[float, float]): Latest shoulder-center offset used by other trackers.
+        """
         super().__init__()
         self.deadzone = MOVE_DEADZONE_RADIUS
         self.max_radius = MOVE_MAX_RADIUS
         self.current_offset = (0.0, 0.0)  # Store for other trackers to use
     
     def _complete_calibration(self):
-        """Average all shoulder center samples."""
+        """
+        Compute the calibrated shoulder-center from collected calibration samples and store it.
+        
+        Calculates the mean x and y from self.calibration_samples and assigns the tuple (avg_x, avg_y) to self.calibrated_value. Also prints the calibrated center coordinates.
+        """
         avg_x = sum(s[0] for s in self.calibration_samples) / len(self.calibration_samples)
         avg_y = sum(s[1] for s in self.calibration_samples) / len(self.calibration_samples)
         self.calibrated_value = (avg_x, avg_y)
@@ -25,13 +39,21 @@ class StrafeTracker(BaseTracker):
     
     def process(self, shoulder_center_x: float, shoulder_center_y: float) -> dict:
         """
-        Process shoulder center position and return strafe value.
+        Compute strafe lean and body offset from shoulder-center coordinates.
         
-        Args:
-            shoulder_center_x, shoulder_center_y: Normalized shoulder center (0-1)
-            
+        While calibration is ongoing, the sample is recorded and the returned lean is 0. After calibration, the shoulder position is compared to the calibrated center to produce:
+        - `lean_x`: signed horizontal strafe value in the range -1.0 to 1.0, applying a deadzone and clamping to the configured max radius.
+        - `body_offset`: tuple (offset_x, offset_y) of the raw offset from the calibrated center.
+        
+        Parameters:
+            shoulder_center_x (float): Normalized horizontal shoulder center (0.0 to 1.0).
+            shoulder_center_y (float): Normalized vertical shoulder center (0.0 to 1.0).
+        
         Returns:
-            dict with 'lean_x' (-1 to 1) and body_offset tuple
+            dict: {
+                'lean_x': float,       # signed strafe magnitude (-1.0 to 1.0)
+                'body_offset': (float, float)  # (offset_x, offset_y) from calibrated center
+            }
         """
         result = {"lean_x": 0.0, "body_offset": (0.0, 0.0)}
         
@@ -62,5 +84,10 @@ class StrafeTracker(BaseTracker):
         return result
     
     def get_body_offset(self) -> Tuple[float, float]:
-        """Get current body offset for other trackers."""
+        """
+        Return the current body offset used by other trackers.
+        
+        Returns:
+            Tuple[float, float]: (offset_x, offset_y) latest shoulder-center offset in tracker coordinates.
+        """
         return self.current_offset
