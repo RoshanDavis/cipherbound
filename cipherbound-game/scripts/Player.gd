@@ -253,8 +253,6 @@ func _cast_lightning_spell():
 func _cast_circle_spell():
 	print("🔮 A mystical orb forms before you!")
 
-func _cast_spiral_spell():
-	print("🌀 Reality warps around you!")
 
 func _cast_arrow_right_spell():
 	print("➡️ Forward dash activated!")
@@ -262,17 +260,10 @@ func _cast_arrow_right_spell():
 func _cast_arrow_left_spell():
 	print("⬅️ Backward leap!")
 
-func _cast_cross_spell():
-	print("✖️ Banishment seal activated!")
 
 func _cast_swipe_spell():
 	print("💨 Quick slash!")
 
-func _cast_triangle_spell():
-	print("🔺 Arcane ward summoned!")
 
 func _cast_swipe_vertical_spell():
 	print("⬆️ Vertical strike!")
-
-func _cast_infinity_spell():
-	print("♾️ Time loop activated!")
