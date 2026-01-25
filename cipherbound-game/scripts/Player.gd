@@ -31,6 +31,8 @@ var look_input := Vector2.ZERO  # Current joystick input (-1 to +1)
 var smoothed_input := Vector2.ZERO  # Smoothed input
 var move_input := Vector2.ZERO  # Movement input (lean_x, lean_y)
 var camera: Camera3D
+var arms: Node3D  # Arms controller (optional)
+var cipher_hud: CanvasLayer  # HUD for drawing feedback
 
 # --- GRAVITY ---
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -41,6 +43,15 @@ func _ready():
 	if not camera:
 		push_error("Player needs a Camera3D child node!")
 		return
+	
+	# Get arms reference (optional - will be created if Arms node exists under Camera)
+	arms = camera.get_node_or_null("Arms")
+	if arms:
+		print("Arms controller found")
+	
+	# Create HUD for cipher feedback
+	cipher_hud = load("res://scripts/CipherHUD.gd").new()
+	add_child(cipher_hud)
 	
 	# Start UDP server
 	var err = server.listen(port)
@@ -129,3 +140,63 @@ func process_network_data():
 				move_input.y = data.get("lean_y", 0.0)
 			else:
 				move_input = Vector2.ZERO
+			
+			# Hand tracking -> Arms (always update, no calibration needed)
+			if arms and arms.has_method("update_from_vision_data"):
+				arms.update_from_vision_data(data)
+			
+			# --- PYTHON-SIDE GESTURE RECOGNITION ---
+			# All gesture recognition is now done in the Python vision server
+			# We just receive the recognized gesture and cast spells
+			
+			var gesture_state: String = data.get("gesture_state", "idle")
+			var gesture_recognized = data.get("gesture_recognized")  # Can be null/string
+			var gesture_score: float = data.get("gesture_score", 0.0)
+			
+			# Update HUD with gesture state
+			if cipher_hud:
+				match gesture_state:
+					"idle":
+						cipher_hud.update_tracking_status(false, false)
+					"ready_to_draw":
+						cipher_hud.update_tracking_status(true, false)
+					"drawing":
+						cipher_hud.update_tracking_status(true, true)
+			
+			# Handle recognized gesture
+			if gesture_recognized != null and gesture_recognized != "":
+				print("PYTHON RECOGNIZED: ", gesture_recognized, " (", gesture_score, ")")
+				_on_cipher_cast(gesture_recognized, gesture_score)
+				# Notify HUD of recognition
+				if cipher_hud:
+					cipher_hud.on_cipher_recognized(gesture_recognized, gesture_score)
+
+func _on_cipher_cast(cipher_name: String, _confidence: float):
+	"""Handle successful cipher cast - trigger spell effects!"""
+	print("SPELL CAST: ", cipher_name)
+	match cipher_name:
+		"fire":
+			_cast_fire_spell()
+		"water":
+			_cast_water_spell()
+		"shield":
+			_cast_shield_spell()
+		"lightning":
+			_cast_lightning_spell()
+
+func _cast_fire_spell():
+	"""Placeholder for fire spell effect."""
+	print("🔥 Fire erupts from your hands!")
+	# TODO: Add particle effects, damage, etc.
+
+func _cast_water_spell():
+	"""Placeholder for water spell effect."""
+	print("💧 Water flows around you!")
+
+func _cast_shield_spell():
+	"""Placeholder for shield spell effect."""
+	print("🛡️ A magical barrier surrounds you!")
+
+func _cast_lightning_spell():
+	"""Placeholder for lightning spell effect."""
+	print("⚡ Lightning crackles through the air!")
