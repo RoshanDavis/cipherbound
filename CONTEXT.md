@@ -16,7 +16,7 @@ The project consists of two independent processes communicating via local UDP.
 * **Constraint:** Must run at 30+ FPS. No heavy game logic here, only detection logic.
 
 **Modular Structure:**
-```
+```text
 vision/src/
 ├── config.py          # All configuration constants
 ├── network.py         # UDP sender class
@@ -30,7 +30,7 @@ vision/src/
 ```
 
 **Current Data Packet:**
-```json
+```jsonc
 {
   "has_face": true,
   "look_x": 0.0,      // -1 to +1, joystick-style camera rotation
@@ -47,10 +47,10 @@ vision/src/
 * **Tech Stack:** Godot 4.x, GDScript.
 * **Input:** Listens on UDP Port 5005 via `UDPServer`.
 * **Logic:**
-    * **Player.gd:** CharacterBody3D with Camera3D child. Handles joystick-style look input with smoothing/curves, strafe and walk movement.
+  * **Player.gd:** CharacterBody3D with Camera3D child. Handles joystick-style look input with smoothing/curves, strafe and walk movement.
 
 ## 3. Directory Structure
-```
+```text
 ROOT (cipherbound/)
 ├── cipherbound-game/        # Godot Project Root
 │   ├── scripts/             # All GDScript files
@@ -111,8 +111,7 @@ ROOT (cipherbound/)
 - [x] Editor-adjustable settings in Godot (sensitivity, curves, speeds)
 - [x] Debug visualization overlay (circles, values, calibration progress)
 
-### Next Goal 🎯
-**Implement Arms/Hands + Cipher Casting System**
+### Next Goal 🎯: Implement Arms/Hands + Cipher Casting System
 
 The player will draw symbols (ciphers) in the air with their hand to cast spells:
 

@@ -1,8 +1,10 @@
 extends Camera3D
 
 # --- CONFIGURATION ---
+# NOTE: This controller is deprecated. Use Player.gd instead.
+# Port 5006 to avoid conflict with Player.gd (5005)
 var server := UDPServer.new()
-var port := 5005
+var port := 5006
 
 @export_range(0.1, 5.0, 0.1) var sensitivity_x := 1.5  ## How much the camera turns left/right
 @export_range(0.1, 5.0, 0.1) var sensitivity_y := 1.0  ## How much the camera looks up/down
@@ -20,8 +22,12 @@ func _ready():
 		printerr("Failed to listen on port " + str(port))
 	else:
 		print("Cipherbound Client listening on port " + str(port))
-
-func _process(_delta):
+func _exit_tree():
+	# Stop the UDP server and release the port when node is freed
+	if server:
+		server.stop()
+		print("HeadController UDP server stopped")
+func _process(delta):
 	# 1. Check for new data packets
 	server.poll()
 	if server.is_connection_available():
@@ -35,13 +41,25 @@ func _process(_delta):
 		
 		if error == OK:
 			var data = json.data
-			if data.has("has_face") and data["has_face"]:
-				update_target_rotation(data["head_x"], data["head_y"])
+			# Only process if data is a valid Dictionary
+			if typeof(data) == TYPE_DICTIONARY:
+				if data.has("has_face") and data["has_face"]:
+					if data.has("head_x") and data.has("head_y"):
+						var head_x = data["head_x"]
+						var head_y = data["head_y"]
+						if typeof(head_x) in [TYPE_FLOAT, TYPE_INT] and typeof(head_y) in [TYPE_FLOAT, TYPE_INT]:
+							update_target_rotation(head_x, head_y)
+						else:
+							printerr("Invalid head_x or head_y type in vision data")
+					else:
+						printerr("Missing head_x or head_y in vision data")
 
 	# 3. Smoothly move the camera towards the target
 	# We use 'lerp' (Linear Interpolation) to filter out webcam jitter
-	rotation.y = lerp_angle(rotation.y, target_rotation.y, smoothing)
-	rotation.x = lerp_angle(rotation.x, target_rotation.x, smoothing)
+	# Frame-rate independent smoothing: t = 1 - (1 - smoothing) ^ delta
+	var t = 1.0 - pow(1.0 - smoothing, delta * 60.0)  # Normalized to 60 FPS baseline
+	rotation.y = lerp_angle(rotation.y, target_rotation.y, t)
+	rotation.x = lerp_angle(rotation.x, target_rotation.x, t)
 
 func update_target_rotation(nose_x: float, nose_y: float):
 	# Map the 0.0-1.0 range to angles (Radians)

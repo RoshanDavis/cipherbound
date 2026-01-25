@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Ensure imports work regardless of current working directory
+_src_dir = os.path.dirname(os.path.abspath(__file__))
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
 import cv2
 import mediapipe as mp
 
@@ -31,10 +39,10 @@ def main():
     strafe_tracker = StrafeTracker()
     depth_tracker = DepthTracker()
     
-    print(f"--- CIPHERBOUND VISION SERVER ---")
+    print("--- CIPHERBOUND VISION SERVER ---")
     print(f"Target: {UDP_IP}:{UDP_PORT}")
-    print(f"Press 'ESC' to quit, 'R' to recalibrate")
-    print(f"Mode: Holistic (Face + Body + Depth)")
+    print("Press 'ESC' to quit, 'R' to recalibrate")
+    print("Mode: Holistic (Face + Body + Depth)")
     
     cap = cv2.VideoCapture(WEBCAM_ID)
     
@@ -46,7 +54,6 @@ def main():
         
         # Flip for selfie-view
         image = cv2.flip(image, 1)
-        h, w, _ = image.shape
         
         # Convert to RGB for MediaPipe
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

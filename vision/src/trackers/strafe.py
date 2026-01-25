@@ -78,7 +78,10 @@ class StrafeTracker(BaseTracker):
         else:
             effective_distance = distance - self.deadzone
             max_effective = self.max_radius - self.deadzone
-            magnitude = min(effective_distance / max_effective, 1.0)
+            if max_effective <= 0:
+                magnitude = 1.0  # Fallback to max if config is invalid
+            else:
+                magnitude = min(effective_distance / max_effective, 1.0)
             result["lean_x"] = math.copysign(magnitude, offset_x)
         
         return result

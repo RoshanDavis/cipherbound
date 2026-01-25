@@ -20,5 +20,5 @@ MOVE_DEADZONE_RADIUS = 0.02   # Inner circle for body lean
 MOVE_MAX_RADIUS = 0.08        # Outer circle for body lean
 
 # Depth (face size) - ratio-based
-DEPTH_DEADZONE = 0.03         # 3% change in face size = deadzone
-DEPTH_MAX = 0.15              # 15% change = max speed
+DEPTH_DEADZONE = 0.08         # 8% change in face size = deadzone (increased to prevent accidental movement)
+DEPTH_MAX = 0.25              # 25% change = max speed (wider range for gradual control)

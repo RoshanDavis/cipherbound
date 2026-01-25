@@ -87,6 +87,9 @@ class DepthTracker(BaseTracker):
         # Calculate relative change from calibrated distance
         # Positive change = face closer (larger) = move forward
         # Negative change = face farther (smaller) = move backward
+        if self.calibrated_value == 0:
+            print("Warning: calibrated_value is zero, skipping depth calculation")
+            return result
         relative_change = (eye_distance - self.calibrated_value) / self.calibrated_value
         
         # Apply deadzone
@@ -101,6 +104,9 @@ class DepthTracker(BaseTracker):
             
             # Map to -1 to 1 range
             max_effective = self.max_change - self.deadzone
+            if max_effective <= 0:
+                print("Warning: max_effective <= 0 in depth tracker, returning neutral")
+                return result
             magnitude = min(abs(effective_change) / max_effective, 1.0)
             result["lean_y"] = math.copysign(magnitude, relative_change)
         

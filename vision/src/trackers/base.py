@@ -13,6 +13,11 @@ class BaseTracker(ABC):
         Parameters:
             calibration_frames (int): Number of samples required to complete calibration.
         """
+        # Validate calibration_frames is a positive integer
+        calibration_frames = int(calibration_frames)
+        if calibration_frames <= 0:
+            raise ValueError(f"calibration_frames must be positive, got {calibration_frames}")
+            
         self.calibration_frames = calibration_frames
         self.calibration_samples: List = []
         self.calibrated_value: Optional[Tuple] = None
