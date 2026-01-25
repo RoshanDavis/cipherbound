@@ -2,51 +2,48 @@ extends CanvasLayer
 ## HUD for displaying cipher drawing feedback and spell effects.
 ## Shows the trail of the player's finger when drawing ciphers.
 
-# --- REFERENCES ---
-@onready var draw_canvas: Control = $DrawCanvas
-@onready var status_label: Label = $StatusLabel
-@onready var spell_label: Label = $SpellLabel
+# --- REFERENCES (created dynamically since loaded via script) ---
+var draw_canvas: Control
+var status_label: Label
+var spell_label: Label
 
 # --- SETTINGS ---
-@export var trail_color := Color(0.3, 0.8, 1.0, 0.9)  ## Cyan glow color
+@export var trail_color := Color(0.3, 0.8, 1.0, 0.9) ## Cyan glow color
 @export var trail_width := 4.0
-@export var trail_fade_time := 0.5  ## Seconds for trail to fade after drawing ends
-@export var success_color := Color(0.2, 1.0, 0.4)  ## Green for success
-@export var fail_color := Color(1.0, 0.3, 0.3)  ## Red for failure
+@export var trail_fade_time := 0.5 ## Seconds for trail to fade after drawing ends
+@export var success_color := Color(0.2, 1.0, 0.4) ## Green for success
+@export var fail_color := Color(1.0, 0.3, 0.3) ## Red for failure
 
 # --- STATE ---
 var draw_points: Array[Vector2] = []
-var beautified_points: Array[Vector2] = []  ## Clean shape after recognition
+var beautified_points: Array[Vector2] = [] ## Clean shape after recognition
 var is_showing_trail := false
 var fade_timer := 0.0
 var current_alpha := 1.0
-var beautify_progress := 0.0  ## 0 = original, 1 = beautified
+var beautify_progress := 0.0 ## 0 = original, 1 = beautified
 var is_beautifying := false
-@export var beautify_duration := 0.3  ## Seconds to morph to clean shape
+@export var beautify_duration := 0.3 ## Seconds to morph to clean shape
 
 func _ready():
-	# Create UI elements if they don't exist
-	if not draw_canvas:
-		draw_canvas = Control.new()
-		draw_canvas.name = "DrawCanvas"
-		draw_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
-		draw_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(draw_canvas)
+	# Create all UI elements dynamically (since this is loaded via script)
+	draw_canvas = Control.new()
+	draw_canvas.name = "DrawCanvas"
+	draw_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
+	draw_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(draw_canvas)
 	
-	if not status_label:
-		status_label = Label.new()
-		status_label.name = "StatusLabel"
-		status_label.position = Vector2(20, 20)
-		status_label.add_theme_font_size_override("font_size", 24)
-		add_child(status_label)
+	status_label = Label.new()
+	status_label.name = "StatusLabel"
+	status_label.position = Vector2(20, 20)
+	status_label.add_theme_font_size_override("font_size", 24)
+	add_child(status_label)
 	
-	if not spell_label:
-		spell_label = Label.new()
-		spell_label.name = "SpellLabel"
-		spell_label.set_anchors_preset(Control.PRESET_CENTER)
-		spell_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		spell_label.add_theme_font_size_override("font_size", 48)
-		add_child(spell_label)
+	spell_label = Label.new()
+	spell_label.name = "SpellLabel"
+	spell_label.set_anchors_preset(Control.PRESET_CENTER)
+	spell_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	spell_label.add_theme_font_size_override("font_size", 48)
+	add_child(spell_label)
 	
 	# Connect drawing to canvas redraw
 	draw_canvas.draw.connect(_on_draw_canvas_draw)
@@ -185,7 +182,7 @@ func on_cipher_cancelled():
 	draw_canvas.queue_redraw()
 	
 	status_label.text = "Cipher cancelled"
-	status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))  # Orange
+	status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2)) # Orange
 	
 	# Reset after delay
 	await get_tree().create_timer(0.8).timeout

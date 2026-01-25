@@ -1,16 +1,16 @@
 """
-Shape recognition using OpenCV contour analysis and heuristics.
+$1 Recognizer - Orientation-Sensitive Version
 
-Uses multiple approaches for robust recognition:
-1. Polygon approximation (corner counting)
-2. Circularity measurement
-3. Hu moments for template matching
-4. Direction change analysis
+Based on the $1 Recognizer algorithm, but with ROTATION INVARIANCE DISABLED
+so that orientation matters (^ is different from > is different from v).
 
-This is more reliable than the $1 recognizer for simple geometric shapes.
+Changes from standard $1:
+- NO rotation to indicative angle (orientation matters)
+- NO rotation search during matching (fixed orientation)
+- Multiple templates for different stroke directions
+
+Templates are defined in a separate method for easy customization.
 """
-import cv2
-import numpy as np
 import math
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
@@ -19,320 +19,237 @@ from dataclasses import dataclass
 @dataclass
 class ShapeResult:
     name: str
-    confidence: float  # 0-1
-    details: Dict  # Additional info for debugging
+    confidence: float
+    score: float  # Raw distance score
 
 
-class ShapeRecognizer:
+class Point:
+    """Simple 2D point."""
+    def __init__(self, x: float, y: float):
+        self.x = x
+        self.y = y
+
+
+class DollarRecognizer:
     """
-    Recognizes basic shapes from point sequences using multiple methods.
+    $1 Recognizer - Orientation-Sensitive Version.
     
-    Supported shapes:
-    - fire: Triangle pointing up (^)
-    - water: Triangle pointing down (v)
-    - shield: Circle or ellipse
-    - lightning: Zigzag / Z-shape
+    Rotation invariance is DISABLED so that orientation matters.
+    This means ^ (up) is recognized differently from > (right) or v (down).
     """
+    
+    # Algorithm parameters
+    NUM_POINTS = 64           # Resample to this many points
+    SQUARE_SIZE = 250.0       # Reference square size for scaling
     
     def __init__(self):
-        # Minimum points needed
-        self.min_points = 10
+        self.templates: Dict[str, List[List[Point]]] = {}
+        self._init_templates()
+    
+    def _init_templates(self):
+        """
+        Load gesture templates from cipher_templates.py configuration file.
+        """
+        from trackers.cipher_templates import CIPHER_TEMPLATES
         
-        # Thresholds
-        self.circle_threshold = 0.75  # How circular (0-1)
-        self.triangle_threshold = 0.6
-        self.zigzag_direction_changes = 2  # Minimum direction reversals for zigzag
+        for name, template_list in CIPHER_TEMPLATES.items():
+            for points in template_list:
+                self.add_template(name, points)
+    
+    def add_template(self, name: str, points: List[Tuple[float, float]]):
+        """Add a template gesture."""
+        # Convert to Point objects and process
+        point_list = [Point(x, y) for x, y in points]
+        processed = self._process_points(point_list)
         
+        if name not in self.templates:
+            self.templates[name] = []
+        self.templates[name].append(processed)
+        print(f"[$1] Added template: {name} (total: {len(self.templates[name])})")
+    
     def recognize(self, points: List[Tuple[float, float]]) -> Optional[ShapeResult]:
         """
-        Recognize a shape from a list of (x, y) points.
+        Recognize a gesture from a list of (x, y) points.
         
-        Args:
-            points: List of (x, y) coordinates (any scale)
-            
-        Returns:
-            ShapeResult with name and confidence, or None if not recognized
+        Returns ShapeResult with name and confidence, or None if not recognized.
         """
-        if len(points) < self.min_points:
-            print(f"[Shape] Not enough points: {len(points)}")
+        if len(points) < 5:
+            print(f"[$1] Not enough points: {len(points)}")
             return None
         
-        # Convert to numpy array and normalize to 0-1000 range for cv2
-        pts = np.array(points, dtype=np.float32)
-        pts = self._normalize_points(pts)
+        # Convert to Point objects and process
+        input_points = [Point(x, y) for x, y in points]
+        processed = self._process_points(input_points)
         
-        # Smooth the points to reduce noise
-        pts = self._smooth_points(pts, window=5)
+        # Find best matching template (NO rotation search - orientation matters!)
+        best_distance = float('inf')
+        best_name = None
         
-        # Calculate features
-        features = self._extract_features(pts)
+        for name, template_list in self.templates.items():
+            for template in template_list:
+                # Direct path distance - no rotation
+                distance = self._path_distance(processed, template)
+                if distance < best_distance:
+                    best_distance = distance
+                    best_name = name
         
-        # Debug output
-        print(f"[Shape] {len(points)} points")
-        print(f"  Corners: {features['corners']}, Circularity: {features['circularity']:.2f}")
-        print(f"  Direction changes: {features['direction_changes']}, Aspect: {features['aspect_ratio']:.2f}")
-        
-        # Decision tree for shape classification
-        result = self._classify_shape(features, pts)
-        
-        if result:
-            print(f"  -> {result.name.upper()} ({result.confidence:.0%})")
-        else:
-            print(f"  -> Not recognized")
-        
-        return result
-    
-    def _normalize_points(self, pts: np.ndarray) -> np.ndarray:
-        """Normalize points to a consistent scale (0-1000)."""
-        min_vals = pts.min(axis=0)
-        max_vals = pts.max(axis=0)
-        
-        # Avoid division by zero
-        range_vals = max_vals - min_vals
-        range_vals[range_vals == 0] = 1
-        
-        # Scale to 0-1000 range
-        normalized = (pts - min_vals) / range_vals * 900 + 50  # Leave margin
-        return normalized.astype(np.float32)
-    
-    def _smooth_points(self, pts: np.ndarray, window: int = 5) -> np.ndarray:
-        """Apply moving average smoothing to reduce jitter."""
-        if len(pts) < window:
-            return pts
-        
-        smoothed = np.zeros_like(pts)
-        half = window // 2
-        
-        for i in range(len(pts)):
-            start = max(0, i - half)
-            end = min(len(pts), i + half + 1)
-            smoothed[i] = pts[start:end].mean(axis=0)
-        
-        return smoothed
-    
-    def _extract_features(self, pts: np.ndarray) -> Dict:
-        """Extract shape features from points."""
-        # Convert to integer for cv2 contour functions
-        pts_int = pts.astype(np.int32).reshape((-1, 1, 2))
-        
-        # 1. Polygon approximation (Douglas-Peucker)
-        perimeter = cv2.arcLength(pts_int, closed=True)
-        epsilon = 0.02 * perimeter  # Approximation accuracy
-        approx = cv2.approxPolyDP(pts_int, epsilon, closed=True)
-        corners = len(approx)
-        
-        # Also try with different epsilon for triangle detection
-        epsilon_triangle = 0.04 * perimeter
-        approx_triangle = cv2.approxPolyDP(pts_int, epsilon_triangle, closed=True)
-        corners_loose = len(approx_triangle)
-        
-        # 2. Circularity (4π × area / perimeter²) - 1.0 for perfect circle
-        area = cv2.contourArea(pts_int)
-        if perimeter > 0:
-            circularity = 4 * math.pi * area / (perimeter * perimeter)
-        else:
-            circularity = 0
-        
-        # 3. Bounding box and aspect ratio
-        x, y, w, h = cv2.boundingRect(pts_int)
-        aspect_ratio = min(w, h) / max(w, h) if max(w, h) > 0 else 1
-        
-        # 4. Direction changes (for zigzag detection)
-        direction_changes = self._count_direction_changes(pts)
-        
-        # 5. Convexity
-        hull = cv2.convexHull(pts_int)
-        hull_area = cv2.contourArea(hull)
-        convexity = area / hull_area if hull_area > 0 else 0
-        
-        # 6. Check if shape is closed (start near end)
-        start_end_dist = np.linalg.norm(pts[0] - pts[-1])
-        is_closed = start_end_dist < perimeter * 0.15
-        
-        # 7. Centroid and orientation
-        M = cv2.moments(pts_int)
-        if M['m00'] > 0:
-            cx = M['m10'] / M['m00']
-            cy = M['m01'] / M['m00']
-        else:
-            cx, cy = pts.mean(axis=0)
-        
-        # 8. Check if triangle points up or down
-        # Find the vertex farthest from the centroid
-        distances = np.linalg.norm(pts - np.array([cx, cy]), axis=1)
-        farthest_idx = np.argmax(distances)
-        farthest_point = pts[farthest_idx]
-        
-        # If farthest point is above centroid, triangle points up
-        points_up = farthest_point[1] < cy
-        
-        return {
-            'corners': corners,
-            'corners_loose': corners_loose,
-            'circularity': circularity,
-            'aspect_ratio': aspect_ratio,
-            'direction_changes': direction_changes,
-            'convexity': convexity,
-            'is_closed': is_closed,
-            'perimeter': perimeter,
-            'area': area,
-            'centroid': (cx, cy),
-            'points_up': points_up,
-            'approx_vertices': approx.reshape(-1, 2) if len(approx) > 0 else []
-        }
-    
-    def _count_direction_changes(self, pts: np.ndarray) -> int:
-        """Count significant direction changes in the stroke (for zigzag detection)."""
-        if len(pts) < 3:
-            return 0
-        
-        # Calculate direction vectors
-        directions = np.diff(pts, axis=0)
-        
-        # Calculate angles
-        angles = np.arctan2(directions[:, 1], directions[:, 0])
-        
-        # Smooth angles
-        if len(angles) > 5:
-            kernel = np.ones(5) / 5
-            angles = np.convolve(angles, kernel, mode='valid')
-        
-        if len(angles) < 2:
-            return 0
-        
-        # Count significant angle changes (> 60 degrees)
-        angle_diffs = np.abs(np.diff(angles))
-        # Handle wraparound
-        angle_diffs = np.minimum(angle_diffs, 2 * np.pi - angle_diffs)
-        
-        significant_changes = np.sum(angle_diffs > math.radians(60))
-        
-        return significant_changes
-    
-    def _classify_shape(self, features: Dict, pts: np.ndarray) -> Optional[ShapeResult]:
-        """Classify the shape based on extracted features."""
-        
-        scores = {}
-        
-        # === CIRCLE / SHIELD ===
-        # High circularity, roughly equal aspect ratio, closed
-        circle_score = 0.0
-        if features['circularity'] > 0.5:
-            circle_score = features['circularity']
-            # Bonus for being closed
-            if features['is_closed']:
-                circle_score += 0.1
-            # Bonus for good aspect ratio (not too elongated)
-            if features['aspect_ratio'] > 0.7:
-                circle_score += 0.1
-        scores['shield'] = min(circle_score, 1.0)
-        
-        # === TRIANGLE (Fire/Water) ===
-        # 3-4 corners when approximated, lower circularity
-        triangle_score = 0.0
-        if features['corners_loose'] in [3, 4] and features['circularity'] < 0.7:
-            # Base score from corner count
-            triangle_score = 0.7 if features['corners_loose'] == 3 else 0.5
-            
-            # Check convexity (triangles are convex)
-            if features['convexity'] > 0.7:
-                triangle_score += 0.2
-            
-            # Bonus for being closed
-            if features['is_closed']:
-                triangle_score += 0.1
-        
-        # Determine if fire (up) or water (down)
-        if triangle_score > 0.5:
-            if features['points_up']:
-                scores['fire'] = triangle_score
-                scores['water'] = triangle_score * 0.3  # Low score for wrong direction
-            else:
-                scores['water'] = triangle_score
-                scores['fire'] = triangle_score * 0.3
-        else:
-            scores['fire'] = triangle_score
-            scores['water'] = triangle_score
-        
-        # === ZIGZAG / LIGHTNING ===
-        # Multiple direction changes, not circular, not closed
-        zigzag_score = 0.0
-        if features['direction_changes'] >= 2:
-            # Base score from direction changes
-            zigzag_score = min(0.5 + features['direction_changes'] * 0.15, 0.95)
-            
-            # Penalty for being too circular
-            if features['circularity'] > 0.6:
-                zigzag_score *= 0.5
-            
-            # Slight penalty for being closed (zigzags usually aren't)
-            if features['is_closed']:
-                zigzag_score *= 0.8
-        scores['lightning'] = zigzag_score
-        
-        # === SELECT BEST MATCH ===
-        if not scores:
+        if best_name is None:
+            print("[$1] No templates matched")
             return None
         
-        best_shape = max(scores, key=scores.get)
-        best_score = scores[best_shape]
+        # Convert distance to confidence score (0-1)
+        half_diagonal = 0.5 * math.sqrt(self.SQUARE_SIZE**2 + self.SQUARE_SIZE**2)
+        score = 1.0 - (best_distance / half_diagonal)
+        confidence = max(0.0, min(1.0, score))
+        
+        print(f"[$1] Best: {best_name} (dist={best_distance:.1f}, conf={confidence:.0%})")
         
         # Require minimum confidence
-        if best_score < 0.55:
+        if confidence < 0.65:
+            print(f"[$1] Confidence too low")
             return None
         
         return ShapeResult(
-            name=best_shape,
-            confidence=best_score,
-            details={
-                'all_scores': scores,
-                'features': features
-            }
+            name=best_name,
+            confidence=confidence,
+            score=best_distance
         )
     
-    def visualize_on_image(self, image: np.ndarray, points: List[Tuple[float, float]], 
-                          result: Optional[ShapeResult] = None) -> np.ndarray:
-        """Draw the stroke and recognition result on an image for debugging."""
+    def _process_points(self, points: List[Point]) -> List[Point]:
+        """
+        Apply preprocessing steps to normalize the gesture.
+        
+        NOTE: NO rotation normalization - we want orientation to matter!
+        """
+        # Step 1: Resample to fixed number of points
+        resampled = self._resample(points, self.NUM_POINTS)
+        
+        # Step 2: Scale to reference square (preserves orientation)
+        scaled = self._scale_to(resampled, self.SQUARE_SIZE)
+        
+        # Step 3: Translate centroid to origin
+        translated = self._translate_to(scaled, Point(0, 0))
+        
+        return translated
+    
+    def _resample(self, points: List[Point], n: int) -> List[Point]:
+        """Resample points to n equidistant points."""
         if len(points) < 2:
-            return image
+            return points
         
-        h, w = image.shape[:2]
+        path_length = self._path_length(points)
+        if path_length < 0.001:
+            return [points[0]] * n
         
-        # Convert points to image coordinates (assuming -1 to 1 range)
-        img_points = []
-        for x, y in points:
-            px = int((x / 2 + 0.5) * w)
-            py = int((y / 2 + 0.5) * h)
-            img_points.append((px, py))
+        interval = path_length / (n - 1)
         
-        # Draw the stroke
-        for i in range(1, len(img_points)):
-            cv2.line(image, img_points[i-1], img_points[i], (0, 255, 255), 2)
+        new_points = [Point(points[0].x, points[0].y)]
+        accumulated = 0.0
+        i = 1
         
-        # Draw result text if recognized
-        if result:
-            text = f"{result.name.upper()} ({result.confidence:.0%})"
-            cv2.putText(image, text, (10, h - 40), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        while i < len(points) and len(new_points) < n:
+            p1 = points[i - 1]
+            p2 = points[i]
+            d = self._distance(p1, p2)
+            
+            if d < 0.0001:
+                i += 1
+                continue
+            
+            if accumulated + d >= interval:
+                t = (interval - accumulated) / d
+                new_x = p1.x + t * (p2.x - p1.x)
+                new_y = p1.y + t * (p2.y - p1.y)
+                new_point = Point(new_x, new_y)
+                new_points.append(new_point)
+                
+                # Continue from new point
+                points = [new_point] + points[i:]
+                accumulated = 0.0
+                i = 1
+            else:
+                accumulated += d
+                i += 1
         
-        return image
+        # Fill remaining points if needed
+        while len(new_points) < n:
+            new_points.append(Point(points[-1].x, points[-1].y))
+        
+        return new_points[:n]
+    
+    def _scale_to(self, points: List[Point], size: float) -> List[Point]:
+        """Scale points to fit in a square of given size."""
+        min_x = min(p.x for p in points)
+        max_x = max(p.x for p in points)
+        min_y = min(p.y for p in points)
+        max_y = max(p.y for p in points)
+        
+        width = max_x - min_x
+        height = max_y - min_y
+        
+        # Avoid division by zero
+        if width < 0.001:
+            width = 1.0
+        if height < 0.001:
+            height = 1.0
+        
+        # Use uniform scaling to preserve aspect ratio
+        scale = size / max(width, height)
+        
+        scaled = []
+        for p in points:
+            new_x = (p.x - min_x) * scale
+            new_y = (p.y - min_y) * scale
+            scaled.append(Point(new_x, new_y))
+        
+        return scaled
+    
+    def _translate_to(self, points: List[Point], target: Point) -> List[Point]:
+        """Translate points so centroid is at target."""
+        c = self._centroid(points)
+        translated = []
+        for p in points:
+            new_x = p.x + target.x - c.x
+            new_y = p.y + target.y - c.y
+            translated.append(Point(new_x, new_y))
+        return translated
+    
+    def _path_distance(self, a: List[Point], b: List[Point]) -> float:
+        """Calculate average distance between corresponding points."""
+        if len(a) != len(b):
+            return float('inf')
+        
+        total = sum(self._distance(a[i], b[i]) for i in range(len(a)))
+        return total / len(a)
+    
+    def _path_length(self, points: List[Point]) -> float:
+        """Calculate total path length."""
+        total = 0.0
+        for i in range(1, len(points)):
+            total += self._distance(points[i-1], points[i])
+        return total
+    
+    def _centroid(self, points: List[Point]) -> Point:
+        """Calculate centroid of points."""
+        x = sum(p.x for p in points) / len(points)
+        y = sum(p.y for p in points) / len(points)
+        return Point(x, y)
+    
+    def _distance(self, a: Point, b: Point) -> float:
+        """Euclidean distance between two points."""
+        return math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
 
 
 class GestureTracker:
-    """
-    Tracks drawing gestures and recognizes cipher shapes.
-    Uses the improved ShapeRecognizer for better accuracy.
-    """
+    """Tracks drawing gestures and recognizes cipher shapes using $1 Recognizer."""
     
     def __init__(self):
-        self.recognizer = ShapeRecognizer()
+        self.recognizer = DollarRecognizer()
         self.current_stroke: List[Tuple[float, float]] = []
         self.is_drawing = False
-        self.min_points = 15
-        self.point_distance_threshold = 0.008  # Minimum distance between points
+        self.min_points = 5
+        self.point_distance_threshold = 0.003
         self.last_point: Optional[Tuple[float, float]] = None
-        
-        # Last recognition result
         self.last_result: Optional[ShapeResult] = None
     
     def start_drawing(self):
@@ -348,7 +265,6 @@ class GestureTracker:
         if not self.is_drawing:
             return
         
-        # Filter points that are too close together
         if self.last_point is not None:
             dist = math.sqrt((x - self.last_point[0])**2 + (y - self.last_point[1])**2)
             if dist < self.point_distance_threshold:
@@ -370,10 +286,8 @@ class GestureTracker:
             self.last_result = None
             return None
         
-        # Attempt recognition
         result = self.recognizer.recognize(self.current_stroke)
         self.last_result = result
-        
         return result
     
     def cancel_drawing(self):

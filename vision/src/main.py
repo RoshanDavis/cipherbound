@@ -221,6 +221,15 @@ def main():
         data_packet["gesture_state"] = gesture_state
         data_packet["drawing_points"] = len(gesture_tracker.current_stroke)
         
+        # Send stroke points for visualization in Godot (convert to list of [x,y])
+        # Limit to every Nth point to reduce packet size
+        stroke = gesture_tracker.current_stroke
+        if len(stroke) > 50:
+            # Downsample to ~50 points
+            step = len(stroke) // 50
+            stroke = stroke[::step]
+        data_packet["stroke_points"] = [[p[0], p[1]] for p in stroke]
+        
         # Update calibration status
         data_packet["calibrated"] = (
             look_tracker.is_calibrated and 
