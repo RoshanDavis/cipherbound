@@ -33,6 +33,7 @@ var move_input := Vector2.ZERO # Movement input (lean_x, lean_y)
 var camera: Camera3D
 var arms: Node3D # Arms controller (optional)
 var cipher_hud: CanvasLayer # HUD for drawing feedback
+var last_recognized_gesture := "" # Last processed gesture to prevent duplicates
 
 # --- GRAVITY ---
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -173,11 +174,18 @@ func process_network_data():
 			
 			# Handle recognized gesture
 			if gesture_recognized != null and gesture_recognized != "":
-				print("PYTHON RECOGNIZED: ", gesture_recognized, " (", gesture_score, ")")
-				_on_cipher_cast(gesture_recognized, gesture_score)
-				# Notify HUD of recognition (this will handle the fade effect)
-				if cipher_hud:
-					cipher_hud.on_cipher_recognized(gesture_recognized, gesture_score)
+				# Only trigger if this is a new recognition (prevent spamming same frame)
+				if gesture_recognized != last_recognized_gesture:
+					print("PYTHON RECOGNIZED: ", gesture_recognized, " (", gesture_score, ")")
+					_on_cipher_cast(gesture_recognized, gesture_score)
+					last_recognized_gesture = gesture_recognized
+					
+					# Notify HUD of recognition (this will handle the fade effect)
+					if cipher_hud:
+						cipher_hud.on_cipher_recognized(gesture_recognized, gesture_score)
+			else:
+				# Reset state when no gesture is being recognized (cleared by server)
+				last_recognized_gesture = ""
 
 func _on_cipher_cast(cipher_name: String, _confidence: float):
 	"""Handle successful cipher cast - trigger spell effects!"""
