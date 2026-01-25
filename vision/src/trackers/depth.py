@@ -1,6 +1,6 @@
 import math
 from .base import BaseTracker
-from ..config import DEPTH_DEADZONE, DEPTH_MAX
+from config import DEPTH_DEADZONE, DEPTH_MAX
 
 
 class DepthTracker(BaseTracker):
@@ -82,6 +82,9 @@ class DepthTracker(BaseTracker):
             
             # Map to -1 to 1 range
             max_effective = self.max_change - self.deadzone
+            if max_effective <= 0:
+                print("Warning: max_effective <= 0 in depth tracker, returning neutral")
+                return result
             magnitude = min(abs(effective_change) / max_effective, 1.0)
             result["lean_y"] = math.copysign(magnitude, relative_change)
         

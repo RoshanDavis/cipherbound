@@ -1,7 +1,7 @@
 import math
 from typing import Tuple
 from .base import BaseTracker
-from ..config import MOVE_DEADZONE_RADIUS, MOVE_MAX_RADIUS
+from config import MOVE_DEADZONE_RADIUS, MOVE_MAX_RADIUS
 
 
 class StrafeTracker(BaseTracker):

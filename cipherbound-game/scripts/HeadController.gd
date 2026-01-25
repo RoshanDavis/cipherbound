@@ -37,6 +37,9 @@ func _process(_delta):
 		
 		if error == OK:
 			var data = json.data
+			# Verify data is a Dictionary before accessing keys
+			if typeof(data) != TYPE_DICTIONARY:
+				return
 			if data.has("has_face") and data["has_face"]:
 				if data.has("head_x") and data.has("head_y"):
 					var head_x = data["head_x"]

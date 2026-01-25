@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List
-from ..config import CALIBRATION_FRAMES
+from config import CALIBRATION_FRAMES
 
 
 class BaseTracker(ABC):
     """Base class for all trackers with calibration support."""
     
     def __init__(self, calibration_frames: int = CALIBRATION_FRAMES):
+        # Validate calibration_frames is a positive integer
+        calibration_frames = int(calibration_frames)
+        if calibration_frames <= 0:
+            raise ValueError(f"calibration_frames must be positive, got {calibration_frames}")
         self.calibration_frames = calibration_frames
         self.calibration_samples: List = []
         self.calibrated_value: Optional[Tuple] = None

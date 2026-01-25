@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Ensure imports work regardless of current working directory
+_src_dir = os.path.dirname(os.path.abspath(__file__))
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
 import cv2
 import mediapipe as mp
 

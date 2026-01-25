@@ -1,7 +1,7 @@
 import math
 from typing import Tuple, Optional
 from .base import BaseTracker
-from ..config import LOOK_DEADZONE_RADIUS, LOOK_MAX_RADIUS
+from config import LOOK_DEADZONE_RADIUS, LOOK_MAX_RADIUS
 
 
 class LookTracker(BaseTracker):
