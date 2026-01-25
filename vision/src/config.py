@@ -4,11 +4,16 @@ UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
 
 # Camera settings
-WEBCAM_ID = 0
+import os
+WEBCAM_ID = int(os.getenv("WEBCAM_ID", 1))
 DEBUG_MODE = True
 
 # Calibration
 CALIBRATION_FRAMES = 30
+
+# --- HAND SETTINGS ---
+# Set to True if user is left-handed (swaps control and drawing hand roles)
+LEFT_HANDED = False
 
 # --- JOYSTICK ZONES ---
 # Look (face tracking) - normalized coordinates (0.0 to 1.0 of screen)
