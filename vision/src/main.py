@@ -26,10 +26,10 @@ def main():
     strafe_tracker = StrafeTracker()
     depth_tracker = DepthTracker()
     
-    print(f"--- CIPHERBOUND VISION SERVER ---")
+    print("--- CIPHERBOUND VISION SERVER ---")
     print(f"Target: {UDP_IP}:{UDP_PORT}")
-    print(f"Press 'ESC' to quit, 'R' to recalibrate")
-    print(f"Mode: Holistic (Face + Body + Depth)")
+    print("Press 'ESC' to quit, 'R' to recalibrate")
+    print("Mode: Holistic (Face + Body + Depth)")
     
     cap = cv2.VideoCapture(WEBCAM_ID)
     
@@ -41,7 +41,6 @@ def main():
         
         # Flip for selfie-view
         image = cv2.flip(image, 1)
-        h, w, _ = image.shape
         
         # Convert to RGB for MediaPipe
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

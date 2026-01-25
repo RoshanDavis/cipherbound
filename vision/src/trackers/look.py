@@ -1,7 +1,7 @@
 import math
 from typing import Tuple, Optional
 from .base import BaseTracker
-from config import LOOK_DEADZONE_RADIUS, LOOK_MAX_RADIUS
+from ..config import LOOK_DEADZONE_RADIUS, LOOK_MAX_RADIUS
 
 
 class LookTracker(BaseTracker):
@@ -62,7 +62,10 @@ class LookTracker(BaseTracker):
         # Map distance from deadzone edge to max radius -> 0.0 to 1.0
         effective_distance = distance - self.deadzone
         max_effective = self.max_radius - self.deadzone
-        magnitude = min(effective_distance / max_effective, 1.0)
+        if max_effective <= 0:
+            magnitude = 0.0
+        else:
+            magnitude = min(effective_distance / max_effective, 1.0)
         
         # Convert back to X/Y using the angle
         result["look_x"] = math.cos(angle) * magnitude

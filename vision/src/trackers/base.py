@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List
-from config import CALIBRATION_FRAMES
+from ..config import CALIBRATION_FRAMES
 
 
 class BaseTracker(ABC):

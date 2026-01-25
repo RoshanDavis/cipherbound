@@ -1,8 +1,10 @@
 extends Camera3D
 
 # --- CONFIGURATION ---
+# NOTE: This controller is deprecated. Use Player.gd instead.
+# Port 5006 to avoid conflict with Player.gd (5005)
 var server := UDPServer.new()
-var port := 5005
+var port := 5006
 
 @export_range(0.1, 5.0, 0.1) var sensitivity_x := 1.5  ## How much the camera turns left/right
 @export_range(0.1, 5.0, 0.1) var sensitivity_y := 1.0  ## How much the camera looks up/down
@@ -36,7 +38,15 @@ func _process(_delta):
 		if error == OK:
 			var data = json.data
 			if data.has("has_face") and data["has_face"]:
-				update_target_rotation(data["head_x"], data["head_y"])
+				if data.has("head_x") and data.has("head_y"):
+					var head_x = data["head_x"]
+					var head_y = data["head_y"]
+					if typeof(head_x) in [TYPE_FLOAT, TYPE_INT] and typeof(head_y) in [TYPE_FLOAT, TYPE_INT]:
+						update_target_rotation(head_x, head_y)
+					else:
+						printerr("Invalid head_x or head_y type in vision data")
+				else:
+					printerr("Missing head_x or head_y in vision data")
 
 	# 3. Smoothly move the camera towards the target
 	# We use 'lerp' (Linear Interpolation) to filter out webcam jitter

@@ -1,6 +1,6 @@
 import math
 from .base import BaseTracker
-from config import DEPTH_DEADZONE, DEPTH_MAX
+from ..config import DEPTH_DEADZONE, DEPTH_MAX
 
 
 class DepthTracker(BaseTracker):
@@ -65,6 +65,9 @@ class DepthTracker(BaseTracker):
         # Calculate relative change from calibrated distance
         # Positive change = face closer (larger) = move forward
         # Negative change = face farther (smaller) = move backward
+        if self.calibrated_value == 0:
+            print("Warning: calibrated_value is zero, skipping depth calculation")
+            return result
         relative_change = (eye_distance - self.calibrated_value) / self.calibrated_value
         
         # Apply deadzone
