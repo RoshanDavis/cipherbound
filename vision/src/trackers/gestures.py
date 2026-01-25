@@ -246,8 +246,14 @@ class DollarRecognizer:
                         points[j].y + t * (points[j + 1].y - points[j].y)
                     )
                     new_points.append(new_point)
-                    # Update accumulated for next iteration (remaining distance on this segment)
-                    accumulated = accumulated + segment_len - target_dist
+                    
+                    # Insert new_point into points list so next iteration starts from it
+                    points.insert(j + 1, new_point)
+                    j += 1 # Move to the new point (start of next segment)
+                    
+                    # Reset accumulated since we are starting exactly at target_dist from previous point
+                    # (which is effectively 0 distance from the new inserted point for the next step)
+                    accumulated = 0.0
                     break
                 else:
                     accumulated += segment_len
@@ -353,7 +359,7 @@ class DollarRecognizer:
             return float('inf')
         
         total = 0.0
-        for p1, p2 in zip(pts1, pts2):
+        for p1, p2 in zip(pts1, pts2, strict=True):
             total += self._distance(p1, p2)
         return total / len(pts1)
     

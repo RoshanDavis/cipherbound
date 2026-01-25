@@ -106,7 +106,7 @@ class DollarRecognizer:
         
         # Require minimum confidence
         if confidence < 0.65:
-            print(f"[$1] Confidence too low")
+            print("[$1] Confidence too low")
             return None
         
         return ShapeResult(
@@ -164,7 +164,7 @@ class DollarRecognizer:
                 new_points.append(new_point)
                 
                 # Continue from new point
-                points = [new_point] + points[i:]
+                points = [new_point, *points[i:]]
                 accumulated = 0.0
                 i = 1
             else:

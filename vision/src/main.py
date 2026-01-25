@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import signal
 
 # Ensure imports work regardless of current working directory
 _src_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,15 @@ from trackers import LookTracker, StrafeTracker, DepthTracker, HandTracker
 from trackers.shape_recognizer import GestureTracker  # Use new OpenCV-based recognizer
 
 
+# Signal handling state
+_shutdown_requested = False
+
+def _signal_handler(signum, frame):
+    global _shutdown_requested
+    print(f"\nSignal {signum} received, shutting down...")
+    _shutdown_requested = True
+
+
 def main():
     """
     Run the vision processing loop: capture frames from the configured webcam,
@@ -26,9 +36,18 @@ def main():
     update trackers to compute look/lean control values, and send a data packet
     over UDP each frame.
     """
+    # Register signal handlers
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
     print("--- CIPHERBOUND VISION SERVER ---")
     print(f"Target: {UDP_IP}:{UDP_PORT}")
     print("Press 'ESC' to quit, 'R' to recalibrate")
+    
+    # Init modules
+    if os.name == 'nt' or not hasattr(signal, 'SIGKILL'):
+         # Windows doesn't strictly need extra signal logic for basic ctrl-c but good practice
+         pass
     print("Mode: Holistic (Face + Body + Hands)")
     print(f"Handedness: {'Left-handed' if LEFT_HANDED else 'Right-handed'}")
     print()
@@ -94,24 +113,27 @@ def main():
         cv2.setWindowProperty('Cipherbound Vision Eye', cv2.WND_PROP_TOPMOST, 1)
         print("Debug window created - should appear on screen")
     
-    while True:
+    while cap.isOpened() and not _shutdown_requested:
         success, image = cap.read()
-        
-        if not success or image is None:
-            empty_frame_count += 1
-            if empty_frame_count >= 30:  # Only warn after many failures
-                print(f"Warning: {empty_frame_count} empty frames, camera may be disconnected")
-                empty_frame_count = 0
+        if not success:
+            print("Ignoring empty camera frame.")
+            # If loading a video, use 'break' instead of 'continue'.
             continue
-        
-        empty_frame_count = 0  # Reset counter on successful read
-        
-        # Flip for selfie-view
+            
+        # Flip for selfie-view (mirror effect) - CRITICAL: Must be done BEFORE processing
         image = cv2.flip(image, 1)
+
+        # --- PROCESS FRAME ---
+        # Convert BGR to RGB
+        image.flags.writeable = False
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Convert to RGB for MediaPipe
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = holistic.process(rgb_image)
+        # Process with Holistic
+        results = holistic.process(image)
+        
+        # Draw on image (for debug)
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         
         # Initialize data packet
         data_packet = {

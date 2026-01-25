@@ -127,10 +127,20 @@ def main():
     
     cv2.namedWindow('Line Tester', cv2.WINDOW_AUTOSIZE)
     
+    import time
+    failure_count = 0
+    
     while True:
         success, image = cap.read()
         if not success:
+            failure_count += 1
+            print(f"Warning: Camera read failed ({failure_count})")
+            time.sleep(0.1)
+            if failure_count > 10:
+                print("Error: Too many consecutive camera failures. Exiting.")
+                break
             continue
+        failure_count = 0
         
         image = cv2.flip(image, 1)
         h, w = image.shape[:2]

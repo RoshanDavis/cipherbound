@@ -145,8 +145,14 @@ func on_drawing_ended():
 	fade_timer = trail_fade_time
 	status_label.text = "Recognizing..."
 
+var _is_showing_result := false
+
 func on_cipher_recognized(cipher_name: String, _confidence: float):
 	"""Called when a cipher is successfully recognized."""
+	if _is_showing_result:
+		return
+		
+	_is_showing_result = true
 	status_label.text = "Cast: " + cipher_name.capitalize() + "!"
 	status_label.add_theme_color_override("font_color", success_color)
 	
@@ -160,6 +166,7 @@ func on_cipher_recognized(cipher_name: String, _confidence: float):
 	spell_label.visible = false
 	status_label.text = "Open left hand, then point with right to draw"
 	status_label.add_theme_color_override("font_color", Color.WHITE)
+	_is_showing_result = false
 
 func on_cipher_failed():
 	"""Called when cipher recognition fails."""

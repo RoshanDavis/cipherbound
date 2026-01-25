@@ -137,9 +137,9 @@ ROOT (cipherbound/)
 | `>` Chevron right | `arrow_right` | Dash Forward | ➡️ Forward dash |
 | `<` Chevron left | `arrow_left` | Backstep | ⬅️ Backward leap |
 | `-` Line | `swipe` | Quick Slash | 💨 Quick physical slash |
-| `|` Line | `swipe_vertical` | Vertical Strike | ⬆️ Vertical strike |
+| `\|` Line | `swipe_vertical` | Vertical Strike | ⬆️ Vertical strike |
 
-*(Note: Templates for circle, spiral, triangle, infinity, and cross were removed to reduce false positives, though handlers exist in Player.gd)*
+
 
 ### Shape Recognition
 - **Algorithm:** $1 Unistroke Recognizer (Geometric template matching).

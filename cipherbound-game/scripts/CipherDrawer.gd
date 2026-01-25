@@ -11,18 +11,18 @@ signal drawing_point_added(point: Vector2)
 signal drawing_ended
 signal cipher_recognized(cipher_name: String, confidence: float)
 signal cipher_failed
-signal drawing_beautified(beautified_points: Array)  ## Emitted with clean shape points
+signal drawing_beautified(beautified_points: Array) ## Emitted with clean shape points
 
 # --- SETTINGS ---
 @export_group("Drawing")
-@export var min_points := 10  ## Minimum points needed for recognition
-@export var max_points := 200  ## Max points to store (prevents memory issues)
-@export var point_distance_threshold := 0.02  ## Min distance between points (normalized)
-@export var drawing_timeout := 2.0  ## Seconds of no movement before auto-end
+@export var min_points := 10 ## Minimum points needed for recognition
+@export var max_points := 200 ## Max points to store (prevents memory issues)
+@export var point_distance_threshold := 0.02 ## Min distance between points (normalized)
+@export var drawing_timeout := 2.0 ## Seconds of no movement before auto-end
 
 @export_group("Recognition")
-@export var recognition_threshold := 0.7  ## Minimum confidence to recognize (0-1)
-@export var sample_points := 32  ## Points to resample to for comparison
+@export var recognition_threshold := 0.7 ## Minimum confidence to recognize (0-1)
+@export var sample_points := 32 ## Points to resample to for comparison
 
 # --- STATE ---
 var is_drawing := false
@@ -34,7 +34,7 @@ var time_since_last_point := 0.0
 # Each pattern is an array of normalized points (0-1 range)
 # These will be compared against drawn strokes
 var cipher_patterns := {
-	"fire": [],      # Will be defined below
+	"fire": [], # Will be defined below
 	"water": [],
 	"shield": [],
 	"lightning": [],
@@ -157,7 +157,7 @@ func add_point(normalized_pos: Vector2):
 	if current_stroke.size() > 0:
 		var dist = normalized_pos.distance_to(last_point)
 		if dist < point_distance_threshold:
-			return  # Too close, skip
+			return # Too close, skip
 	
 	# Add the point
 	if current_stroke.size() < max_points:
@@ -165,6 +165,10 @@ func add_point(normalized_pos: Vector2):
 		last_point = normalized_pos
 		time_since_last_point = 0.0
 		drawing_point_added.emit(normalized_pos)
+	else:
+		# Max points reached, auto-end drawing to prevent stuck state
+		time_since_last_point = 0.0
+		end_drawing()
 
 func end_drawing():
 	"""Finish drawing and attempt recognition."""
@@ -270,7 +274,7 @@ func _resample_stroke(stroke: Array[Vector2], n: int) -> Array[Vector2]:
 			var t = (interval - accumulated) / seg_len if seg_len > 0 else 0.0
 			var new_point = stroke_copy[j - 1].lerp(stroke_copy[j], t)
 			resampled.append(new_point)
-			stroke_copy.insert(j, new_point)  # Insert for next iteration
+			stroke_copy.insert(j, new_point) # Insert for next iteration
 			accumulated = 0.0
 		else:
 			accumulated += seg_len

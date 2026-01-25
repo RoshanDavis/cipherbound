@@ -158,7 +158,8 @@ func process_network_data():
 			if cipher_hud:
 				match gesture_state:
 					"idle":
-						cipher_hud.update_tracking_status(false, false)
+						# Still report hands as active even if idle
+						cipher_hud.update_tracking_status(true, false)
 						# Clear any remaining stroke when idle
 						_clear_stroke_visualization()
 					"ready_to_draw":
@@ -190,24 +191,22 @@ func _on_cipher_cast(cipher_name: String, _confidence: float):
 			_cast_shield_spell()
 		"lightning":
 			_cast_lightning_spell()
+		# Complex shapes removed for reliability:
 		"circle":
 			_cast_circle_spell()
-		"spiral":
-			_cast_spiral_spell()
+		# "spiral": _cast_spiral_spell()
+		# "triangle": _cast_triangle_spell()
+		# "infinity": _cast_infinity_spell()
+		# "cross": _cast_cross_spell()
+		
 		"arrow_right":
 			_cast_arrow_right_spell()
 		"arrow_left":
 			_cast_arrow_left_spell()
-		"cross":
-			_cast_cross_spell()
 		"swipe":
 			_cast_swipe_spell()
 		"swipe_vertical":
 			_cast_swipe_vertical_spell()
-		"triangle":
-			_cast_triangle_spell()
-		"infinity":
-			_cast_infinity_spell()
 		_:
 			print("Unknown cipher: ", cipher_name)
 

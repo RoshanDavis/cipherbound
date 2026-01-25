@@ -14,19 +14,19 @@ extends Node3D
 
 # --- SETTINGS ---
 @export_group("Arm Positioning")
-@export var arm_distance := 0.4  ## How far in front of camera
-@export var arm_scale := Vector3(0.15, 0.15, 0.4)  ## Scale of arm mesh
-@export var hand_scale := Vector3(0.1, 0.1, 0.1)  ## Scale of hand mesh
+@export var arm_distance := 0.4 ## How far in front of camera
+@export var arm_scale := Vector3(0.15, 0.15, 0.4) ## Scale of arm mesh
+@export var hand_scale := Vector3(0.1, 0.1, 0.1) ## Scale of hand mesh
 
 @export_group("Movement")
-@export_range(0.0, 1.0, 0.05) var position_smoothing := 0.15  ## Lower = smoother
-@export var horizontal_range := 0.6  ## How far arms can move left/right
-@export var vertical_range := 0.4  ## How far arms can move up/down
-@export var depth_range := 0.3  ## How far arms can move forward/back
+@export_range(0.0, 1.0, 0.05) var position_smoothing := 0.15 ## Lower = smoother
+@export var horizontal_range := 0.6 ## How far arms can move left/right
+@export var vertical_range := 0.4 ## How far arms can move up/down
+@export var depth_range := 0.3 ## How far arms can move forward/back
 
 @export_group("Rest Position")
-@export var left_rest_pos := Vector3(-0.25, -0.2, -0.4)  ## Left arm rest position
-@export var right_rest_pos := Vector3(0.25, -0.2, -0.4)  ## Right arm rest position
+@export var left_rest_pos := Vector3(-0.25, -0.2, -0.4) ## Left arm rest position
+@export var right_rest_pos := Vector3(0.25, -0.2, -0.4) ## Right arm rest position
 
 # --- STATE ---
 var left_target_pos := Vector3.ZERO
@@ -66,6 +66,12 @@ func _process(_delta: float):
 		else:
 			# Return to rest position when not tracked
 			left_arm.position = left_arm.position.lerp(left_rest_pos, position_smoothing * 0.5)
+			# Hide and reset state if completely lost tracking for a bit (simulate immediate loss for now)
+			left_arm.visible = false
+			left_pointing = false
+			left_fist = false
+			left_hand_open = false
+			_check_state_changes()
 	
 	if right_arm:
 		if right_visible:
@@ -73,6 +79,11 @@ func _process(_delta: float):
 			right_arm.visible = true
 		else:
 			right_arm.position = right_arm.position.lerp(right_rest_pos, position_smoothing * 0.5)
+			right_arm.visible = false
+			right_pointing = false
+			right_fist = false
+			right_hand_open = false
+			_check_state_changes()
 
 func update_from_vision_data(data: Dictionary):
 	"""Called from Player.gd with vision tracking data."""
@@ -84,7 +95,7 @@ func update_from_vision_data(data: Dictionary):
 		left_target_pos = _hand_data_to_position(hand, true)
 		left_hand_open = hand.get("is_open", false)
 		left_pointing = hand.get("is_pointing", false)
-		left_fist = hand.get("is_closed", false)  # Use is_closed instead of is_fist
+		left_fist = hand.get("is_closed", false) # Use is_closed instead of is_fist
 		_update_hand_visual(left_arm, left_hand_open, left_pointing, left_fist)
 	
 	# Right hand
@@ -94,7 +105,7 @@ func update_from_vision_data(data: Dictionary):
 		right_target_pos = _hand_data_to_position(hand, false)
 		right_hand_open = hand.get("is_open", false)
 		right_pointing = hand.get("is_pointing", false)
-		right_fist = hand.get("is_closed", false)  # Use is_closed instead of is_fist
+		right_fist = hand.get("is_closed", false) # Use is_closed instead of is_fist
 		_update_hand_visual(right_arm, right_hand_open, right_pointing, right_fist)
 	
 	# Check for state changes and emit signals
@@ -110,14 +121,14 @@ func _hand_data_to_position(hand_data: Dictionary, is_left: bool) -> Vector3:
 	# Z: depth (forward/back)
 	
 	var x = palm.get("x", 0.0) * horizontal_range
-	var y = -palm.get("y", 0.0) * vertical_range  # Flip Y
-	var z = -arm_distance + palm.get("z", 0.0) * depth_range
+	var y = - palm.get("y", 0.0) * vertical_range # Flip Y
+	var z = - arm_distance + palm.get("z", 0.0) * depth_range
 	
 	# Offset based on which hand
 	if is_left:
-		x -= 0.1  # Offset left
+		x -= 0.1 # Offset left
 	else:
-		x += 0.1  # Offset right
+		x += 0.1 # Offset right
 	
 	return Vector3(x, y, z)
 
@@ -131,13 +142,13 @@ func _update_hand_visual(arm: Node3D, is_open: bool, is_pointing: bool, is_fist:
 		var mat = hand.material_override as StandardMaterial3D
 		if mat:
 			if is_pointing:
-				mat.albedo_color = Color(0.2, 1.0, 0.4)  # Green when pointing (drawing mode)
+				mat.albedo_color = Color(0.2, 1.0, 0.4) # Green when pointing (drawing mode)
 			elif is_fist:
-				mat.albedo_color = Color(1.0, 0.5, 0.2)  # Orange when fist
+				mat.albedo_color = Color(1.0, 0.5, 0.2) # Orange when fist
 			elif is_open:
-				mat.albedo_color = Color(0.8, 0.6, 0.5)  # Normal skin tone
+				mat.albedo_color = Color(0.8, 0.6, 0.5) # Normal skin tone
 			else:
-				mat.albedo_color = Color(0.7, 0.55, 0.45)  # Slightly darker when closed
+				mat.albedo_color = Color(0.7, 0.55, 0.45) # Slightly darker when closed
 
 # --- SIGNALS FOR GESTURE SYSTEM ---
 signal hand_pointing_started(is_left: bool)
