@@ -1,21 +1,6 @@
-[gd_scene load_steps=15 format=3 uid="uid://2oyxswthq44v"]
+[gd_scene load_steps=10 format=3 uid="uid://puida31u7dw"]
 
-[ext_resource type="Script" uid="uid://djcbj1xrfwcm2" path="res://scripts/Player.gd" id="2_player"]
-[ext_resource type="Script" uid="uid://c4jdn7c6gabwm" path="res://scripts/Arms.gd" id="3_arms"]
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_forearm"]
-radius = 0.03
-height = 0.25
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
-albedo_color = Color(0.8, 0.6, 0.5, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_hand"]
-size = Vector3(0.08, 0.03, 0.1)
-
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
-radius = 0.4
-height = 1.8
+[ext_resource type="PackedScene" uid="uid://bbgalb8adrapu" path="res://scenes/player/player.tscn" id="1_uwrxv"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yqjtg"]
 albedo_color = Color(0.14020047, 0.62812984, 0.05336009, 1)
@@ -59,47 +44,7 @@ fog_density = 0.005
 
 [node name="Game" type="Node3D"]
 
-[node name="Player" type="CharacterBody3D" parent="."]
-script = ExtResource("2_player")
-sensitivity_x = 3.0
-sensitivity_y = 1.6
-pitch_min = -1.02
-pitch_max = 1.0
-
-[node name="Camera3D" type="Camera3D" parent="Player"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-
-[node name="Arms" type="Node3D" parent="Player/Camera3D"]
-script = ExtResource("3_arms")
-
-[node name="LeftArm" type="Node3D" parent="Player/Camera3D/Arms"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, -0.2, -0.4)
-
-[node name="Forearm" type="MeshInstance3D" parent="Player/Camera3D/Arms/LeftArm"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.1)
-mesh = SubResource("CapsuleMesh_forearm")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="Hand" type="MeshInstance3D" parent="Player/Camera3D/Arms/LeftArm"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
-mesh = SubResource("BoxMesh_hand")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="RightArm" type="Node3D" parent="Player/Camera3D/Arms"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, -0.2, -0.4)
-
-[node name="Forearm" type="MeshInstance3D" parent="Player/Camera3D/Arms/RightArm"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.1)
-mesh = SubResource("CapsuleMesh_forearm")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="Hand" type="MeshInstance3D" parent="Player/Camera3D/Arms/RightArm"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
-mesh = SubResource("BoxMesh_hand")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
-shape = SubResource("CapsuleShape3D_player")
+[node name="Player" parent="." instance=ExtResource("1_uwrxv")]
 
 [node name="Environment" type="Node3D" parent="."]
 

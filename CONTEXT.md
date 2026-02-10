@@ -1,9 +1,9 @@
 # PROJECT CONTEXT: CIPHERBOUND
 
 ## 1. Project Overview
-**Name:** Cipherbound
-**Genre:** First-Person Wizard RPG (FPV)
-**Core Mechanic:** "No-Controller" Input. The player controls the game entirely using computer vision (Head tracking for camera, Body lean for movement, Hand gestures for magic).
+**Name:** Cipherbound  
+**Genre:** Third-Person Wizard RPG  
+**Core Mechanic:** "No-Controller" Input. The player controls the game entirely using computer vision (Head tracking for camera, Body lean for movement, Hand gestures for magic).  
 **Goal:** Build a cohesive "Side-Car" application where a lightweight Python vision server drives a Godot 4 game client in real-time.
 
 ## 2. Technical Architecture: "The Side-Car Pattern"
@@ -67,16 +67,39 @@ vision/src/
 * **Role:** The "World". Renders the game and interprets raw data into game actions.
 * **Tech Stack:** Godot 4.x, GDScript.
 * **Input:** Listens on UDP Port 5005 via `UDPServer`.
-* **Gesture Recognition:** Handled Python-side; Godot receives recognized gestures and casts spells.
+* **View:** Third-person over-the-shoulder camera with SpringArm3D collision avoidance.
+* **Gesture Recognition:** Handled Python-side; Godot receives recognized gestures and triggers character animations/spells.
 
-**Godot Script Structure:**
+**Godot Script Structure (Feature-Based Organization):**
 ```text
 cipherbound-game/scripts/
-├── Player.gd           # Main player controller - movement, camera, casting
-├── Arms.gd             # First-person arm visualization
-├── CipherDrawer.gd     # (Legacy) Godot-side pattern matching
-├── CipherHUD.gd        # HUD for drawing feedback & spell effects
-└── HeadController.gd   # (Deprecated) Old controller
+├── player/                   # Player-related scripts
+│   ├── player_controller.gd  # Main player controller - UDP, movement, spell dispatch
+│   ├── camera_rig.gd         # Third-person SpringArm camera with head tracking
+│   └── player_animator.gd    # Animation state machine (idle, walk, run, cast)
+├── vision/                   # Vision/HUD integration
+│   └── cipher_hud.gd         # HUD for stroke visualization & spell feedback
+├── spells/                   # Spell system
+│   └── spell_manager.gd      # Autoload singleton for spell registration & dispatch
+└── deprecated/               # Legacy scripts (kept for reference)
+    ├── Arms.gd               # Old first-person arm visualization
+    ├── CipherDrawer.gd       # Old Godot-side pattern matching
+    └── HeadController.gd     # Old head controller
+```
+
+**Player Scene Node Structure:**
+```text
+Player (CharacterBody3D) - player_controller.gd
+├── CameraRig (Node3D) - camera_rig.gd
+│   └── SpringArm3D
+│       └── Camera3D
+├── CollisionShape3D
+├── PlayerModel (Node3D)
+│   ├── GeneralSkeleton (Skeleton3D)
+│   │   ├── Body, Lower_Armor, Head_Hands (MeshInstance3D)
+│   ├── AnimationPlayer (with player_library)
+│   └── PlayerAnimator (Node) - player_animator.gd
+└── SpellOrigin (Marker3D) - spell spawn point
 ```
 
 ## 3. Directory Structure
@@ -84,7 +107,16 @@ cipherbound-game/scripts/
 ROOT (cipherbound/)
 ├── cipherbound-game/        # Godot Project Root
 │   ├── scripts/             # All GDScript files
-│   └── scenes/              # .tscn files
+│   │   ├── player/          # Player controller, camera, animator
+│   │   ├── vision/          # HUD and vision integration
+│   │   ├── spells/          # Spell manager and effects
+│   │   └── deprecated/      # Legacy scripts (reference only)
+│   ├── scenes/              # .tscn scene files
+│   │   ├── player/          # Player scene
+│   │   └── game.tscn        # Main game scene
+│   └── assets/              # Models, animations, textures
+│       ├── models/          # Character and environment models
+│       └── animation libraries/ # Animation resources
 ├── vision/                  # Python Project Root
 │   ├── src/                 # Python source code
 │   │   ├── trackers/        # Tracker modules
@@ -153,8 +185,13 @@ ROOT (cipherbound/)
 - **CipherHUD:**
   - Draws the user's stroke in real-time (cyan glow).
   - Fades out stroke on completion/cancellation.
-  - Displays recognized spell name.
-- **Arms:** Green glow when pointing/drawing.
+  - Displays recognized spell name and tracking status.
+- **PlayerAnimator:**
+  - Character performs casting animations when spells are triggered.
+  - State machine handles transitions (idle → casting → back to locomotion).
+- **Third-Person Camera:**
+  - Over-the-shoulder view with SpringArm collision avoidance.
+  - Smooth rotation following head tracking input.
 
 ## 7. Current Development State
 
@@ -166,12 +203,21 @@ ROOT (cipherbound/)
 - [x] **Ciphers:** 8 active ciphers (Fire, Water, Shield, Lightning, Arrows, Swipes).
 - [x] **Networking:** UDP communication of state + stroke points.
 - [x] **Game Client:** Godot character controller with "Side-Car" integration.
-- [x] **Visuals:** Real-time stroke drawing on HUD, arm visualization.
-- [x] **Feedback:** HUD status text, spell announcements.
+- [x] **Visuals:** Real-time stroke drawing on HUD.
+- [x] **Third-Person Camera:** SpringArm3D camera rig with collision avoidance.
+- [x] **Animation System:** PlayerAnimator state machine (structure ready).
+- [x] **Spell System:** SpellManager singleton foundation (needs autoload registration).
 
 ### Next Goals 🎯
-1. **Spell Visual Effects:** Add actual particles/projectiles for the spells.
-2. **Game Environment:** Create a test dungeon/arena.
-3. **Gameplay Loop:** Add enemies or targets to use spells on.
+1. **Register SpellManager Autoload:** Add to Project Settings → Autoload.
+2. **Animation Integration:** Configure animation names in PlayerAnimator exports.
+3. **Spell Visual Effects:** Implement actual spell particle effects.
+4. **Game Environment:** Create a test dungeon/arena.
+5. **Gameplay Loop:** Add enemies or targets to use spells on.
 
-
+### Setup Notes
+To complete the transition to third-person:
+1. Open Godot and go to Project → Project Settings → Autoload.
+2. Add `res://scripts/spells/spell_manager.gd` as `SpellManager` (singleton).
+3. Verify AnimationPlayer has animations named: `idle`, `walking`, `running`, `casting`.
+4. Run the game and test with the Python vision server.
