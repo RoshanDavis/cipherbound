@@ -7,10 +7,10 @@ extends Node
 # --- SPELL REGISTRY ---
 ## Maps cipher names to spell configurations
 var spell_registry: Dictionary = {
-	"fire": {
-		"name": "Fireball",
-		"emoji": "🔥",
-		"description": "Fire erupts from your hands!"
+	"air_blast": {
+		"name": "Air Blast Jump",
+		"emoji": "💨",
+		"description": "A blast of air launches you skyward!"
 	},
 	"water": {
 		"name": "Water Wave", 
@@ -76,8 +76,8 @@ func cast_spell(cipher_name: String, origin: Vector3, direction: Vector3) -> voi
 	
 	# Dispatch to specific spell handler
 	match cipher_name:
-		"fire":
-			_cast_fire(origin, direction)
+		"air_blast":
+			_cast_air_blast(origin, direction)
 		"water":
 			_cast_water(origin, direction)
 		"shield":
@@ -114,13 +114,10 @@ func register_spell(cipher_name: String, info: Dictionary) -> void:
 # --- SPELL IMPLEMENTATIONS ---
 # These are placeholder implementations. Replace with actual VFX/projectiles.
 
-func _cast_fire(_origin: Vector3, _direction: Vector3) -> void:
-	"""Fire spell - projectile-based."""
-	# TODO: Spawn fireball projectile
-	# var fireball = preload("res://scenes/spells/fireball.tscn").instantiate()
-	# fireball.global_position = origin
-	# fireball.direction = direction
-	# get_tree().current_scene.add_child(fireball)
+func _cast_air_blast(_origin: Vector3, _direction: Vector3) -> void:
+	"""Air Blast - launches the player upward (handled by PlayerController)."""
+	# The actual jump is handled by PlayerController's wind jump system.
+	# This is here for spell registry completeness.
 	pass
 
 func _cast_water(_origin: Vector3, _direction: Vector3) -> void:

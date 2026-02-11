@@ -18,11 +18,10 @@ var server := UDPServer.new()
 @export_group("Character Rotation")
 @export_range(1.0, 20.0, 0.5) var rotation_speed := 10.0 ## How fast character turns
 @export var face_camera_forward := true ## Character always faces camera direction (third-person)
-
 @export_group("Wind Jump")
 @export_range(5.0, 30.0, 0.5) var wind_jump_force := 15.0 ## Initial upward velocity for wind jump
 @export_range(0.5, 3.0, 0.1) var wind_jump_duration := 1.0 ## How long the wind boost lasts
-@export var wind_jump_cipher := "fire" ## Which cipher triggers wind jump (upward chevron)
+@export var wind_jump_cipher := "air_blast" ## Which cipher triggers wind jump (upward chevron)
 @export_range(0.5, 5.0, 0.1) var landing_detection_height := 1.5 ## Height at which to start landing animation (match animation duration)
 
 # --- COMPONENT REFERENCES ---
@@ -64,15 +63,12 @@ func _setup_components() -> void:
 		# Position at shoulder height
 		camera_rig.position = Vector3(0, 1.6, 0)
 	
-	# Player animator (look in PlayerModel)
+	# Player animator (AnimationTree with PlayerAnimator script, under PlayerModel)
 	var player_model := get_node_or_null("PlayerModel")
 	if player_model:
 		player_animator = player_model.get_node_or_null("PlayerAnimator") as PlayerAnimator
 		if not player_animator:
-			# Try to create it
-			player_animator = PlayerAnimator.new()
-			player_animator.name = "PlayerAnimator"
-			player_model.add_child(player_animator)
+			push_warning("PlayerController: PlayerAnimator (AnimationTree) not found in PlayerModel")
 	
 	# Spell origin marker
 	spell_origin = get_node_or_null("SpellOrigin") as Marker3D
@@ -311,31 +307,35 @@ func _apply_movement(_delta: float) -> void:
 	velocity.z = lerp(velocity.z, target_vel.z, move_smoothing)
 
 func _update_character_rotation(delta: float) -> void:
-	"""Smoothly rotate the player model to always face camera forward direction."""
+	"""Smoothly rotate the player model to face camera forward direction."""
 	if not face_camera_forward or not camera_rig:
 		return
 	
-	var player_model := get_node_or_null("PlayerModel")
+	var player_model: Node3D = get_node_or_null("PlayerModel") as Node3D
 	if not player_model:
 		return
 	
-	# Get camera's forward direction on XZ plane
 	var cam_forward := camera_rig.get_forward_direction()
 	if cam_forward.length_squared() < 0.01:
 		return
 	
-	# Calculate target rotation - use positive values since PlayerModel has 180° baked in
-	var target_rotation: float = atan2(cam_forward.x, cam_forward.z)
+	var target_yaw := atan2(cam_forward.x, cam_forward.z)
+	var model_rot: Vector3 = player_model.rotation
+	var current_yaw := model_rot.y
 	
-	# Smoothly interpolate toward target
-	var current: float = player_model.rotation.y
-	var diff: float = wrapf(target_rotation - current, -PI, PI)
-	player_model.rotation.y += diff * rotation_speed * delta
+	# Smoothly lerp rotation toward camera forward
+	player_model.rotation.y = lerp_angle(current_yaw, target_yaw, clampf(rotation_speed * delta, 0.0, 1.0))
 
 func _update_stroke_visualization(stroke_points: Array) -> void:
 	"""Update the cipher stroke visualization on HUD."""
 	if not cipher_hud:
 		return
+	
+	# Ensure trail is visible (reset fade state from previous cipher)
+	cipher_hud.current_alpha = 1.0
+	cipher_hud.fade_timer = 0.0
+	cipher_hud.is_beautifying = false
+	cipher_hud.beautify_progress = 0.0
 	
 	cipher_hud.draw_points.clear()
 	for point in stroke_points:

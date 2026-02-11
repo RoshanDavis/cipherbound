@@ -46,29 +46,29 @@ class DollarRecognizer:
     
     def _init_templates(self):
         """Initialize the cipher shape templates."""
-        # Fire: Triangle pointing up (^) - multiple starting points and directions
-        self.templates["fire"] = self._create_template([
+        # Air Blast: Chevron pointing up (^) - multiple starting points and directions
+        self.templates["air_blast"] = self._create_template([
             (0.5, 1.0),    # Bottom center
             (0.0, 0.0),    # Top left
             (1.0, 0.0),    # Top right  
             (0.5, 1.0),    # Close
         ])
         
-        self.templates["fire_cw"] = self._create_template([
+        self.templates["air_blast_cw"] = self._create_template([
             (0.5, 1.0),    # Bottom center
             (1.0, 0.0),    # Top right
             (0.0, 0.0),    # Top left
             (0.5, 1.0),    # Close
         ])
         
-        self.templates["fire_v1"] = self._create_template([
+        self.templates["air_blast_v1"] = self._create_template([
             (0.0, 1.0),    # Bottom left
             (0.5, 0.0),    # Top center
             (1.0, 1.0),    # Bottom right
             (0.0, 1.0),    # Close
         ])
         
-        self.templates["fire_v2"] = self._create_template([
+        self.templates["air_blast_v2"] = self._create_template([
             (1.0, 1.0),    # Bottom right
             (0.5, 0.0),    # Top center
             (0.0, 1.0),    # Bottom left

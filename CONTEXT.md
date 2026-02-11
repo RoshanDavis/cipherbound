@@ -57,7 +57,7 @@ vision/src/
   
   // Gesture recognition (Python-side)
   "gesture_state": "idle|ready_to_draw|drawing",
-  "gesture_recognized": "fire|water|shield|lightning|swipe|...|null",
+  "gesture_recognized": "air_blast|water|shield|lightning|swipe|...|null",
   "gesture_score": 0.85,
   "stroke_points": [[x, y], ...]  // For Godot visualization (downsampled stroke)
 }
@@ -76,7 +76,7 @@ cipherbound-game/scripts/
 ├── player/                   # Player-related scripts
 │   ├── player_controller.gd  # Main player controller - UDP, movement, spell dispatch
 │   ├── camera_rig.gd         # Third-person SpringArm camera with head tracking
-│   └── player_animator.gd    # Animation state machine (idle, walk, run, cast)
+│   └── player_animator.gd    # AnimationTree driver (BlendSpace2D locomotion, StateMachine states)
 ├── vision/                   # Vision/HUD integration
 │   └── cipher_hud.gd         # HUD for stroke visualization & spell feedback
 ├── spells/                   # Spell system
@@ -97,8 +97,9 @@ Player (CharacterBody3D) - player_controller.gd
 ├── PlayerModel (Node3D)
 │   ├── GeneralSkeleton (Skeleton3D)
 │   │   ├── Body, Lower_Armor, Head_Hands (MeshInstance3D)
-│   ├── AnimationPlayer (with player_library)
-│   └── PlayerAnimator (Node) - player_animator.gd
+│   ├── AnimationPlayer (with player_library, active=OFF)
+│   └── PlayerAnimator (AnimationTree) - player_animator.gd (extends AnimationTree)
+│       └── StateMachine: Locomotion[BlendSpace2D], Jump, Fall, Land, Cast, Death
 └── SpellOrigin (Marker3D) - spell spawn point
 ```
 
@@ -162,7 +163,7 @@ ROOT (cipherbound/)
 
 | Symbol | Cipher Name | Spell | Effect |
 |--------|-------------|-------|--------|
-| `^` Chevron up | `fire` | Fireball | 🔥 Fire erupts from hands |
+| `^` Chevron up | `air_blast` | Air Blast Jump | 💨 A blast of air launches you skyward |
 | `v` Chevron down | `water` | Water Wave | 💧 Water flows around player |
 | `□` Square | `shield` | Shield | 🛡️ Magical barrier surrounds player |
 | `Z` Zigzag | `lightning` | Lightning | ⚡ Lightning crackles through air |
@@ -186,9 +187,11 @@ ROOT (cipherbound/)
   - Draws the user's stroke in real-time (cyan glow).
   - Fades out stroke on completion/cancellation.
   - Displays recognized spell name and tracking status.
-- **PlayerAnimator:**
-  - Character performs casting animations when spells are triggered.
-  - State machine handles transitions (idle → casting → back to locomotion).
+- **PlayerAnimator (AnimationTree):**
+  - AnimationNodeStateMachine with states: Locomotion, Jump, Fall, Land, Cast, Death.
+  - BlendSpace2D for locomotion continuously blends idle/walk/run/strafe based on input Vector2.
+  - Call Method Tracks on animations trigger events (jump launch, landing done, cast done).
+  - AtEnd transitions auto-return from Cast/Land to Locomotion.
 - **Third-Person Camera:**
   - Over-the-shoulder view with SpringArm collision avoidance.
   - Smooth rotation following head tracking input.
@@ -200,17 +203,17 @@ ROOT (cipherbound/)
 - [x] **Movement:** Head tracking (Camera), Body leaning (Strafe), Depth (Walk).
 - [x] **Hand Tracking:** Hand detection, gesture state machine.
 - [x] **Shape Recognition:** $1 Recognizer with configurable templates.
-- [x] **Ciphers:** 8 active ciphers (Fire, Water, Shield, Lightning, Arrows, Swipes).
+- [x] **Ciphers:** 8 active ciphers (Air Blast, Water, Shield, Lightning, Arrows, Swipes).
 - [x] **Networking:** UDP communication of state + stroke points.
 - [x] **Game Client:** Godot character controller with "Side-Car" integration.
 - [x] **Visuals:** Real-time stroke drawing on HUD.
 - [x] **Third-Person Camera:** SpringArm3D camera rig with collision avoidance.
-- [x] **Animation System:** PlayerAnimator state machine (structure ready).
+- [x] **Animation System:** AnimationTree with BlendSpace2D locomotion + StateMachine (Jump, Fall, Land, Cast, Death). Call Method Tracks for event timing.
 - [x] **Spell System:** SpellManager singleton foundation (needs autoload registration).
 
 ### Next Goals 🎯
 1. **Register SpellManager Autoload:** Add to Project Settings → Autoload.
-2. **Animation Integration:** Configure animation names in PlayerAnimator exports.
+2. **AnimationTree Editor Setup:** Configure BlendSpace2D points, StateMachine transitions, and Call Method Tracks (see setup guide in player_animator.gd).
 3. **Spell Visual Effects:** Implement actual spell particle effects.
 4. **Game Environment:** Create a test dungeon/arena.
 5. **Gameplay Loop:** Add enemies or targets to use spells on.
@@ -219,5 +222,13 @@ ROOT (cipherbound/)
 To complete the transition to third-person:
 1. Open Godot and go to Project → Project Settings → Autoload.
 2. Add `res://scripts/spells/spell_manager.gd` as `SpellManager` (singleton).
-3. Verify AnimationPlayer has animations named: `idle`, `walking`, `running`, `casting`.
+3. Follow the **Manual Setup Guide** in `player_animator.gd` to configure the AnimationTree:
+   - Enable AnimationTree (set process_mode = Inherit, active = ON).
+   - Disable AnimationPlayer (active = OFF — the tree drives it now).
+   - Build StateMachine states: Locomotion (BlendSpace2D), Jump, Fall, Land, Cast, Death.
+   - Configure BlendSpace2D with 7 animation points (idle, walk, run, strafe, backward).
+   - Add transitions with correct Switch Mode (Immediate/AtEnd).
+   - Add Call Method Tracks to jumping, landing, casting, death animations.
+   - Attach player_animator.gd to the AnimationTree node and rename it to "PlayerAnimator".
+   - Delete the old empty PlayerAnimator Node.
 4. Run the game and test with the Python vision server.

@@ -1,245 +1,353 @@
-extends Node
+extends AnimationTree
 class_name PlayerAnimator
-## Professional animation controller using AnimationPlayer directly.
-## Handles locomotion and jump sequences with proper state management.
+## Animation controller that extends AnimationTree directly.
+## Drives a StateMachine + BlendSpace2D for locomotion blending and action states.
 ##
-## Attach as child of PlayerModel (sibling to AnimationPlayer).
+## Attach this script directly to the AnimationTree node under PlayerModel,
+## then rename that node to "PlayerAnimator".
+## Delete the old empty PlayerAnimator Node if it still exists.
+##
+## ============================================================================
+## MANUAL SETUP GUIDE — Godot Editor Configuration
+## ============================================================================
+##
+## STEP 0: Attach This Script & Rename the Node
+## ---------------------------------------------
+## 1. Select the "AnimationTree" node under PlayerModel.
+## 2. Drag this script onto it (or Inspector → Script → Load).
+## 3. Rename the node from "AnimationTree" to "PlayerAnimator".
+## 4. Delete the old empty "PlayerAnimator" Node if it still exists.
+## 5. Your tree should now look like:
+##      PlayerModel (Node3D)
+##      ├── AnimationPlayer       (active = OFF)
+##      └── PlayerAnimator (AnimationTree) — this script
+##
+## STEP 1: Configure the AnimationTree Properties
+## -----------------------------------------------
+## 1. In the Inspector on "PlayerAnimator" (this node):
+##    • Set "Anim Player" → "../AnimationPlayer".
+##    • Set "Active" → ON.
+##    • Set Process Mode → "Inherit".
+## 2. On the "AnimationPlayer" node, set "Active" → OFF
+##    (the tree drives it now — avoids conflicts).
+##
+## STEP 2: Build the StateMachine
+## ------------------------------
+## 1. Double-click the PlayerAnimator node to open the AnimationTree editor.
+## 2. The root is already an AnimationNodeStateMachine. Inside it, add:
+##
+##    a) Right-click → "Add BlendSpace2D" → rename to "Locomotion".
+##    b) Right-click → "Add Animation" → rename to "Jump",
+##       set animation = "basic_movement_library/jumping".
+##    c) Right-click → "Add Animation" → rename to "Fall",
+##       set animation = "basic_movement_library/falling".
+##    d) Right-click → "Add Animation" → rename to "Land",
+##       set animation = "basic_movement_library/landing".
+##    e) Right-click → "Add Animation" → rename to "Cast",
+##       set animation = "basic_movement_library/casting".
+##    f) Right-click → "Add Animation" → rename to "Death",
+##       set animation = "basic_movement_library/death".
+## 3. Right-click "Locomotion" → "Set as Start Node" (green arrow).
+##
+## STEP 3: Configure BlendSpace2D ("Locomotion")
+## ----------------------------------------------
+## 1. Double-click the "Locomotion" BlendSpace2D to open it.
+## 2. Set axis ranges:  X Min = -1, X Max = 1  |  Y Min = -1, Y Max = 1
+## 3. Set X Label = "Strafe", Y Label = "Forward".
+## 4. Set Blend Mode = "Interpolated" (default).
+## 5. Add points (click in the grid, pick the animation, then type exact coords):
+##
+##      Position (X, Y)  │  Animation
+##     ──────────────────┼──────────────────────────────
+##      ( 0.0,  0.0)     │  basic_movement_library/idle
+##      ( 0.0,  0.5)     │  basic_movement_library/walking
+##      ( 0.0, -0.5)     │  basic_movement_library/walking back
+##      ( 0.0,  1.0)     │  basic_movement_library/running
+##      ( 0.0, -1.0)     │  basic_movement_library/running back
+##      (-1.0,  0.0)     │  basic_movement_library/walking left
+##      ( 1.0,  0.0)     │  basic_movement_library/walking right
+##
+## 6. Click "Back" (top-left) to return to the StateMachine view.
+##
+## STEP 4: Configure the "Fall" Animation to Loop
+## ------------------------------------------------
+## 1. In the AnimationPlayer, open "basic_movement_library/falling".
+## 2. Click the loop icon (🔁) in the animation timeline toolbar
+##    so it is set to "Loop" (wrap mode). This replaces the old
+##    _loop_falling() coroutine.
+##
+## STEP 5: Add Transitions
+## -----------------------
+## In the StateMachine editor, draw connections:
+##
+##   From         →  To          │ Switch Mode │ Notes
+##  ─────────────────────────────┼─────────────┼──────────────────────────
+##   Locomotion   →  Jump        │ Immediate   │ (script calls travel)
+##   Locomotion   →  Cast        │ Immediate   │ (script calls travel)
+##   Locomotion   →  Death       │ Immediate   │ (script calls travel)
+##   Jump         →  Fall        │ AtEnd       │ Auto-advances when jump anim ends
+##   Jump         →  Land        │ Immediate   │ (early landing via travel)
+##   Fall         →  Land        │ Immediate   │ (script calls travel)
+##   Land         →  Locomotion  │ AtEnd       │ Auto-advances when land anim ends
+##   Cast         →  Locomotion  │ AtEnd       │ Auto-advances when cast anim ends
+## To set these: click a transition arrow → Inspector:
+##   • "Switch Mode" = Immediate or AtEnd as listed above.
+##   • "Advance Mode" = "Auto" for AtEnd transitions (they fire automatically).
+##   • "Advance Mode" = "Enabled" for Immediate transitions (script drives them).
+##   • "Xfade Time" = 0.15 (crossfade duration).
+##
+## STEP 6: Add Call Method Tracks (Event Callbacks)
+## -------------------------------------------------
+## These replace the old await/coroutine timing with editor-keyframed events.
+##
+## For each animation below, open it in the AnimationPlayer editor:
+##
+## A) "basic_movement_library/jumping":
+##    1. Click "Add Track" → "Call Method Track".
+##    2. Target node path: "../PlayerAnimator" (the node this script is on).
+##    3. Add a keyframe at 70% of the animation length
+##       (e.g., if anim is 1.0s, place key at 0.7s).
+##    4. Set the method to: _on_anim_event_jump_launch
+##       (no arguments needed).
+##
+## B) "basic_movement_library/landing":
+##    1. Add a "Call Method Track" → target "../PlayerAnimator".
+##    2. Add a keyframe at the LAST FRAME (animation length - 0.01).
+##    3. Method: _on_anim_event_landing_done
+##
+## C) "basic_movement_library/casting":
+##    1. Add a "Call Method Track" → target "../PlayerAnimator".
+##    2. Keyframe at the LAST FRAME.
+##    3. Method: _on_anim_event_cast_done
+##
+## D) "basic_movement_library/death":
+##    1. Add a "Call Method Track" → target "../PlayerAnimator".
+##    2. Keyframe at the LAST FRAME.
+##    3. Method: _on_anim_event_death_done
+##
+## ============================================================================
+## END OF SETUP GUIDE
+## ============================================================================
 
 enum State { LOCOMOTION, JUMPING, FALLING, LANDING, CASTING, DEATH }
 
 # --- CONFIGURATION ---
-@export_group("Animation Names")
-@export var anim_idle := "player_library/idle"
-@export var anim_walk := "player_library/walking"
-@export var anim_walk_back := "player_library/walking back" ## Walking backward
-@export var anim_run := "player_library/running"
-@export var anim_run_back := "player_library/running back" ## Running backward
-@export var anim_strafe_left := "player_library/walking left"
-@export var anim_strafe_right := "player_library/walking right"
-@export var anim_jumping := "player_library/jumping"
-@export var anim_falling := "player_library/falling"
-@export var anim_landing := "player_library/landing"
-@export var anim_casting := "player_library/casting" ## Spell casting animation
-@export var anim_death := "player_library/death" ## Death animation
-
-@export_group("Thresholds")
-@export_range(0.0, 1.0) var walk_threshold := 0.1
-@export_range(0.0, 1.0) var run_threshold := 0.7
-@export_range(0.0, 1.0) var blend_time := 0.15
-
-@export_group("Jump Timing")
-@export_range(0.0, 1.0) var jump_launch_point := 0.7 ## When to apply velocity (0.7 = 70% through jump animation)
+@export_group("Blend Parameters")
+@export var locomotion_param := "parameters/Locomotion/blend_position" ## BlendSpace2D parameter path
+@export_range(1.0, 30.0, 0.5) var blend_smoothing := 8.0 ## How fast blend position catches up (higher = snappier)
 
 # --- REFERENCES ---
-var anim_player: AnimationPlayer
+var _playback: AnimationNodeStateMachinePlayback
 
 # --- STATE ---
 var _state := State.LOCOMOTION
 var _movement_input := Vector2.ZERO
-var _current_locomotion := ""
+var _blend_position := Vector2.ZERO ## Smoothed blend position (lerped toward _movement_input)
+var _travel_pending := false ## True after travel() called, prevents sync from overriding state
+var _travel_pending_since := 0 ## Timestamp (msec) when _travel_pending was set
+const TRAVEL_TIMEOUT_MS := 500 ## Max time to wait for travel() to take effect
 
 # --- SIGNALS ---
 signal state_changed(new_state: State)
-signal jump_launch() ## Emitted when velocity should be applied (at launch_point in animation)
-signal landing_finished()
+signal jump_launch() ## Emitted when velocity should be applied (via Call Method Track)
+signal landing_finished() ## Emitted when landing animation completes
 signal death_finished() ## Emitted when death animation completes
-
 func _ready() -> void:
-	# Find AnimationPlayer in parent
-	var parent := get_parent()
-	if parent:
-		anim_player = parent.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	# Ensure the tree is active
+	active = true
 	
-	if not anim_player:
-		push_error("PlayerAnimator: AnimationPlayer not found in parent node!")
+	# Get the StateMachine playback object
+	_playback = self["parameters/playback"] as AnimationNodeStateMachinePlayback
+	if not _playback:
+		push_error("PlayerAnimator: Could not get StateMachine playback. Is tree_root an AnimationNodeStateMachine?")
 		return
 	
-	# Start idle
-	_play(anim_idle)
-	_current_locomotion = anim_idle
-	print("PlayerAnimator: Initialized with AnimationPlayer")
+	print("PlayerAnimator: Initialized (AnimationTree script)")
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if not _playback:
+		return
+	
+	# Smoothly interpolate blend position to avoid jitter from raw vision input
 	if _state == State.LOCOMOTION:
-		_update_locomotion()
+		_blend_position = _blend_position.lerp(_movement_input, clampf(blend_smoothing * delta, 0.0, 1.0))
+		# Snap to zero when very close (prevents micro-drift keeping walk alive)
+		if _blend_position.length() < 0.01:
+			_blend_position = Vector2.ZERO
+		self[locomotion_param] = _blend_position
+	
+	# Track state based on what the StateMachine is actually playing
+	_sync_state_from_playback()
 
 # ============================================================================
-# LOCOMOTION
+# STATE SYNC — keep _state in sync with the StateMachine
 # ============================================================================
 
-func _update_locomotion() -> void:
-	var target_anim := _get_locomotion_animation()
-	if target_anim != _current_locomotion:
-		_current_locomotion = target_anim
-		_play(target_anim)
-
-func _get_locomotion_animation() -> String:
-	var mag := _movement_input.length()
+func _sync_state_from_playback() -> void:
+	"""Sync internal state when the StateMachine auto-advances (AtEnd transitions)."""
+	if not _playback:
+		return
 	
-	if mag < walk_threshold:
-		return anim_idle
+	var current_node := _playback.get_current_node()
 	
-	# Check strafe vs forward/back
-	if abs(_movement_input.x) > abs(_movement_input.y):
-		return anim_strafe_left if _movement_input.x < 0 else anim_strafe_right
-	else:
-		if _movement_input.y > 0:
-			return anim_run if mag >= run_threshold else anim_walk
+	# Guard against travel() race condition:
+	# After calling travel(), the playback node doesn't switch instantly.
+	# If we sync before it switches, we'd wrongly reset state to LOCOMOTION.
+	# Wait until the node has actually changed before resuming sync.
+	if _travel_pending:
+		if current_node != "Locomotion":
+			_travel_pending = false
+		elif Time.get_ticks_msec() - _travel_pending_since < TRAVEL_TIMEOUT_MS:
+			return  # Still waiting for travel() to take effect
 		else:
-			# Moving backward
-			return anim_run_back if mag >= run_threshold else anim_walk_back
+			# Travel timed out — likely no transition exists; recover gracefully
+			push_warning("PlayerAnimator: travel() timed out — check StateMachine transitions.")
+			_travel_pending = false
+			_set_state(State.LOCOMOTION)
+			return
+	
+	match current_node:
+		"Locomotion":
+			if _state != State.LOCOMOTION:
+				_set_state(State.LOCOMOTION)
+		"Jump":
+			if _state != State.JUMPING:
+				_set_state(State.JUMPING)
+		"Fall":
+			if _state != State.FALLING:
+				_set_state(State.FALLING)
+		"Land":
+			if _state != State.LANDING:
+				_set_state(State.LANDING)
+		"Cast":
+			if _state != State.CASTING:
+				_set_state(State.CASTING)
+		"Death":
+			if _state != State.DEATH:
+				_set_state(State.DEATH)
+# ============================================================================
+# HELPERS
+# ============================================================================
+
+func _begin_travel(node_name: StringName) -> void:
+	"""Travel to a StateMachine node with pending-travel guard."""
+	_travel_pending = true
+	_travel_pending_since = Time.get_ticks_msec()
+	_playback.travel(node_name)
 
 # ============================================================================
 # JUMP SEQUENCE
 # ============================================================================
 
 func play_jump() -> void:
-	"""Start the jump animation. Emits jump_launch when velocity should be applied."""
+	"""Start the jump animation. jump_launch is emitted via Call Method Track."""
 	if _state != State.LOCOMOTION:
 		return
 	
 	_set_state(State.JUMPING)
-	_play(anim_jumping, 0.1)
+	_begin_travel("Jump")
 	print("PlayerAnimator: JUMPING (wind-up)")
-	
-	# Wait until launch point in animation, then emit signal
-	_wait_for_launch_point()
-
-func _wait_for_launch_point() -> void:
-	"""Wait until launch point in jump animation, then emit jump_launch signal."""
-	if not anim_player or not anim_player.has_animation(anim_jumping):
-		jump_launch.emit()  # Fallback: emit immediately
-		return
-	
-	var anim_length := anim_player.get_animation(anim_jumping).length
-	var launch_time := anim_length * jump_launch_point
-	
-	# Wait until we reach the launch point
-	while _state == State.JUMPING and anim_player:
-		var current_pos := anim_player.current_animation_position
-		if current_pos >= launch_time:
-			break
-		await get_tree().process_frame
-	
-	# Emit launch signal if still jumping
-	if _state == State.JUMPING:
-		print("PlayerAnimator: LAUNCH! (at ", jump_launch_point * 100, "% of animation)")
-		jump_launch.emit()
 
 func set_falling() -> void:
-	"""Transition to falling loop. Called by controller when velocity.y < 0."""
+	"""Transition to falling. Called by controller when velocity.y < 0."""
 	if _state == State.FALLING:
-		return  # Already falling
+		return
 	if _state != State.JUMPING:
-		return  # Only transition from jumping
+		return
 	
 	_set_state(State.FALLING)
-	_play(anim_falling, 0.1)
+	_begin_travel("Fall")
 	print("PlayerAnimator: FALLING")
-	
-	# Start the falling loop
-	_loop_falling()
-
-func _loop_falling() -> void:
-	"""Keep playing falling animation until landing is triggered."""
-	while _state == State.FALLING and anim_player:
-		# Wait for current falling animation to finish
-		if anim_player.is_playing() and anim_player.current_animation == anim_falling:
-			await anim_player.animation_finished
-		
-		# If still falling, replay
-		if _state == State.FALLING and anim_player:
-			anim_player.play(anim_falling, 0.0)  # Seamless loop
 
 func play_landing() -> void:
-	"""Play landing animation. Emits landing_finished when done."""
+	"""Transition to landing. landing_finished is emitted via Call Method Track."""
 	if _state == State.LANDING:
-		return  # Already landing
+		return
 	if _state != State.FALLING and _state != State.JUMPING:
-		return  # Only land from air states
+		return
 	
 	_set_state(State.LANDING)
-	_play(anim_landing, 0.1)
+	_begin_travel("Land")
 	print("PlayerAnimator: LANDING")
-	
-	# Wait for landing to finish, then return to locomotion
-	await anim_player.animation_finished
-	
-	_set_state(State.LOCOMOTION)
-	_current_locomotion = ""  # Force locomotion update
-	landing_finished.emit()
-	print("PlayerAnimator: Landing complete → LOCOMOTION")
 
 # ============================================================================
 # SPELL CASTING
 # ============================================================================
 
-func play_spell_animation(cipher_name: String) -> void:
-	"""Play a spell casting animation for the given cipher."""
+func play_spell_animation(_cipher_name: String) -> void:
+	"""Play casting animation. Return to locomotion is handled by AtEnd transition."""
 	if _state == State.CASTING:
-		return  # Already casting
+		return
 	if _state != State.LOCOMOTION:
-		return  # Only cast from locomotion
-	
-	_set_state(State.CASTING)
-	
-	# Try cipher-specific animation first, fallback to generic casting
-	var specific_anim := "player_library/" + cipher_name
-	if anim_player and anim_player.has_animation(specific_anim):
-		_play(specific_anim, 0.1)
-	elif anim_player and anim_player.has_animation(anim_casting):
-		_play(anim_casting, 0.1)
-	else:
-		# No casting animation available, return to locomotion immediately
-		_set_state(State.LOCOMOTION)
 		return
 	
-	print("PlayerAnimator: CASTING (", cipher_name, ")")
-	
-	# Return to locomotion after cast animation
-	await anim_player.animation_finished
-	_set_state(State.LOCOMOTION)
-	_current_locomotion = ""  # Force locomotion update
-	print("PlayerAnimator: Cast complete → LOCOMOTION")
+	_set_state(State.CASTING)
+	_begin_travel("Cast")
+	print("PlayerAnimator: CASTING (", _cipher_name, ")")
 
 # ============================================================================
 # DEATH
 # ============================================================================
 
 func play_death() -> void:
-	"""Play death animation. Does not return to locomotion."""
+	"""Play death animation. death_finished is emitted via Call Method Track."""
 	if _state == State.DEATH:
-		return  # Already dead
+		return
 	
 	_set_state(State.DEATH)
-	_play(anim_death, 0.1)
+	_begin_travel("Death")
 	print("PlayerAnimator: DEATH")
-	
-	# Wait for animation to finish, then emit signal
-	if anim_player and anim_player.has_animation(anim_death):
-		await anim_player.animation_finished
-	death_finished.emit()
 
 func is_dead() -> bool:
 	"""Check if currently in death state."""
 	return _state == State.DEATH
 
 func reset_from_death() -> void:
-	"""Reset from death state (for respawn). Call this to revive the player."""
+	"""Reset from death state (for respawn)."""
 	if _state != State.DEATH:
 		return
 	
 	_set_state(State.LOCOMOTION)
-	_current_locomotion = anim_idle
-	_play(anim_idle)
+	_travel_pending = false
+	_playback.travel("Locomotion")
+	self[locomotion_param] = Vector2.ZERO
 	print("PlayerAnimator: Respawned → LOCOMOTION")
+
+# ============================================================================
+# CALL METHOD TRACK CALLBACKS
+# ============================================================================
+# These functions are called by keyframes placed on Call Method Tracks
+# in the AnimationPlayer. See the setup guide at the top of this file.
+
+func _on_anim_event_jump_launch() -> void:
+	"""Called by Call Method Track on jumping animation at ~70%.
+	Emits jump_launch so the controller applies upward velocity."""
+	print("PlayerAnimator: LAUNCH! (Call Method Track)")
+	jump_launch.emit()
+
+func _on_anim_event_landing_done() -> void:
+	"""Called by Call Method Track on landing animation at final frame.
+	Emits landing_finished, then StateMachine auto-transitions to Locomotion."""
+	print("PlayerAnimator: Landing complete → LOCOMOTION")
+	landing_finished.emit()
+
+func _on_anim_event_cast_done() -> void:
+	"""Called by Call Method Track on casting animation at final frame.
+	StateMachine auto-transitions to Locomotion via AtEnd."""
+	print("PlayerAnimator: Cast complete → LOCOMOTION")
+
+func _on_anim_event_death_done() -> void:
+	"""Called by Call Method Track on death animation at final frame."""
+	print("PlayerAnimator: Death animation complete")
+	death_finished.emit()
 
 # ============================================================================
 # PUBLIC API
 # ============================================================================
 
 func set_movement_input(input: Vector2) -> void:
-	"""Update movement input vector (x=strafe, y=forward/back)."""
+	"""Update movement input vector (x=strafe, y=forward/back).
+	Directly drives the BlendSpace2D blend position."""
 	_movement_input = input
 
 func is_in_air() -> bool:
@@ -253,24 +361,14 @@ func get_state() -> State:
 func force_idle() -> void:
 	"""Force return to idle (use for recovery from bad states)."""
 	_set_state(State.LOCOMOTION)
-	_current_locomotion = anim_idle
-	_play(anim_idle)
+	_travel_pending = false
+	if _playback:
+		_playback.travel("Locomotion")
+	self[locomotion_param] = Vector2.ZERO
 
 # ============================================================================
 # INTERNAL
 # ============================================================================
-
-func _play(anim_name: String, custom_blend := -1.0) -> void:
-	"""Play animation with validation."""
-	if not anim_player:
-		return
-	
-	if not anim_player.has_animation(anim_name):
-		push_warning("PlayerAnimator: Animation not found: ", anim_name)
-		return
-	
-	var blend := custom_blend if custom_blend >= 0 else blend_time
-	anim_player.play(anim_name, blend)
 
 func _set_state(new_state: State) -> void:
 	"""Update state and emit signal."""

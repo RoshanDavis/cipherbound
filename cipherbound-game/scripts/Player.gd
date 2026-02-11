@@ -191,8 +191,8 @@ func _on_cipher_cast(cipher_name: String, _confidence: float):
 	"""Handle successful cipher cast - trigger spell effects!"""
 	print("SPELL CAST: ", cipher_name)
 	match cipher_name:
-		"fire":
-			_cast_fire_spell()
+		"air_blast":
+			_cast_air_blast_spell()
 		"water":
 			_cast_water_spell()
 		"shield":
@@ -246,8 +246,8 @@ func _clear_stroke_visualization():
 	if cipher_hud.draw_canvas:
 		cipher_hud.draw_canvas.queue_redraw()
 
-func _cast_fire_spell():
-	print("🔥 Fire erupts from your hands!")
+func _cast_air_blast_spell():
+	print("💨 A blast of air launches you skyward!")
 
 func _cast_water_spell():
 	print("💧 Water flows around you!")
