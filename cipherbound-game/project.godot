@@ -14,3 +14,7 @@ config/name="cipherbound-game"
 run/main_scene="uid://puida31u7dw"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+SpellManager="*res://scripts/spells/spell_manager.gd"

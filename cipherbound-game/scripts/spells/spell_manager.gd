@@ -23,9 +23,9 @@ var spell_registry: Dictionary = {
 		"description": "A magical barrier surrounds you!"
 	},
 	"lightning": {
-		"name": "Lightning",
+		"name": "Throw Forward",
 		"emoji": "⚡",
-		"description": "Lightning crackles through the air!"
+		"description": "A projectile thrown forward!"
 	},
 	"circle": {
 		"name": "Mystic Orb",
@@ -33,24 +33,26 @@ var spell_registry: Dictionary = {
 		"description": "A mystical orb forms before you!"
 	},
 	"arrow_right": {
-		"name": "Dash Forward",
+		"name": "Dash Right",
 		"emoji": "➡️",
-		"description": "Forward dash activated!"
+		"description": "Lateral dash to the right!",
+		"is_movement": true
 	},
 	"arrow_left": {
-		"name": "Backstep",
+		"name": "Dash Left",
 		"emoji": "⬅️",
-		"description": "Backward leap!"
+		"description": "Lateral dash to the left!",
+		"is_movement": true
 	},
 	"swipe": {
-		"name": "Quick Slash",
+		"name": "Swipe Horizontal",
 		"emoji": "💨",
-		"description": "Quick slash!"
+		"description": "Horizontal slash!"
 	},
 	"swipe_vertical": {
-		"name": "Vertical Strike",
+		"name": "Swipe Up",
 		"emoji": "⬆️",
-		"description": "Vertical strike!"
+		"description": "Upward strike!"
 	}
 }
 
@@ -87,9 +89,9 @@ func cast_spell(cipher_name: String, origin: Vector3, direction: Vector3) -> voi
 		"circle":
 			_cast_circle(origin, direction)
 		"arrow_right":
-			_cast_dash_forward(origin, direction)
+			_cast_dash_right(origin, direction)
 		"arrow_left":
-			_cast_dash_backward(origin, direction)
+			_cast_dash_left(origin, direction)
 		"swipe":
 			_cast_swipe(origin, direction)
 		"swipe_vertical":
@@ -140,19 +142,19 @@ func _cast_circle(_origin: Vector3, _direction: Vector3) -> void:
 	# TODO: Spawn orbiting orb
 	pass
 
-func _cast_dash_forward(_origin: Vector3, direction: Vector3) -> void:
-	"""Dash forward - movement ability."""
-	# TODO: Apply impulse to player in direction
-	# Find player and apply velocity
-	var player := get_tree().get_first_node_in_group("player")
-	if player and player is CharacterBody3D:
-		player.velocity += direction * 15.0  # Dash impulse
+func _cast_dash_right(_origin: Vector3, _direction: Vector3) -> void:
+	"""Dash right - lateral movement ability.
+	Movement is handled by PlayerAnimator.dash_impulse signal.
+	This function is for VFX only."""
+	# TODO: Spawn dash trail particles
+	pass
 
-func _cast_dash_backward(_origin: Vector3, direction: Vector3) -> void:
-	"""Dash backward - evasion ability."""
-	var player := get_tree().get_first_node_in_group("player")
-	if player and player is CharacterBody3D:
-		player.velocity -= direction * 12.0  # Backstep impulse
+func _cast_dash_left(_origin: Vector3, _direction: Vector3) -> void:
+	"""Dash left - lateral movement ability.
+	Movement is handled by PlayerAnimator.dash_impulse signal.
+	This function is for VFX only."""
+	# TODO: Spawn dash trail particles
+	pass
 
 func _cast_swipe(_origin: Vector3, _direction: Vector3) -> void:
 	"""Quick slash - melee attack."""

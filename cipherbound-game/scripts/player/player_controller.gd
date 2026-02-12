@@ -14,6 +14,9 @@ var server := UDPServer.new()
 @export_range(1.0, 15.0, 0.5) var strafe_speed := 5.0 ## Left/right movement speed
 @export_range(1.0, 15.0, 0.5) var walk_speed := 5.0 ## Forward/back movement speed
 @export_range(0.05, 0.5, 0.05) var move_smoothing := 0.15 ## Movement smoothing
+@export_range(5.0, 50.0, 0.5) var dash_speed := 15.0 ## Horizontal dash speed
+@export_range(0.0, 30.0, 0.5) var dash_jump_force := 10.0 ## Vertical force for dash
+@export_range(0.0, 1.0, 0.05) var dash_air_control := 0.0 ## How much player can steer during dash (0 = none, 1 = full)
 
 @export_group("Character Rotation")
 @export_range(1.0, 20.0, 0.5) var rotation_speed := 10.0 ## How fast character turns
@@ -33,12 +36,11 @@ var ground_raycast: RayCast3D  ## Detects ground for landing anticipation
 
 # --- STATE ---
 var move_input := Vector2.ZERO ## Movement input (lean_x, lean_y)
+var look_input := Vector2.ZERO ## Look input for idle turning
 var last_recognized_gesture := "" ## Prevent duplicate spell casts
-var is_wind_jumping := false ## Currently performing wind jump
+var is_in_physics_ability := false ## Currently in a physics-dependent ability (jump/dash)
 var was_on_floor := true ## Track floor state for landing detection
-var is_landing_triggered := false ## Prevents multiple landing triggers
-var jump_has_peaked := false ## True once velocity.y goes negative (reached apex)
-var jump_has_launched := false ## True once jump velocity is actually applied
+var ability_has_launched := false ## True once ability velocity is applied
 
 # --- GRAVITY ---
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -90,6 +92,13 @@ func _setup_components() -> void:
 	cipher_hud = load("res://scripts/vision/cipher_hud.gd").new()
 	add_child(cipher_hud)
 	
+	# Connect animator signals
+	if player_animator:
+		player_animator.jump_launch.connect(_on_jump_launch)
+		player_animator.dash_impulse.connect(_on_dash_impulse)
+		player_animator.landing_finished.connect(_on_landing_finished)
+		player_animator.spell_effect.connect(_on_spell_effect)
+	
 	print("PlayerController initialized")
 
 func _start_network() -> void:
@@ -128,11 +137,12 @@ func _process_network_data() -> void:
 	
 	# --- CAMERA LOOK (Head tracking) ---
 	if data.get("has_face", false) and is_calibrated:
-		var look_x: float = data.get("look_x", 0.0)
-		var look_y: float = data.get("look_y", 0.0)
+		look_input.x = data.get("look_x", 0.0)
+		look_input.y = data.get("look_y", 0.0)
 		if camera_rig:
-			camera_rig.set_look_input(Vector2(look_x, look_y))
+			camera_rig.set_look_input(look_input)
 	else:
+		look_input = Vector2.ZERO
 		if camera_rig:
 			camera_rig.set_look_input(Vector2.ZERO)
 	
@@ -143,9 +153,14 @@ func _process_network_data() -> void:
 	else:
 		move_input = Vector2.ZERO
 	
-	# Update animator with movement
+	# Update animator with movement and idle turn
 	if player_animator:
 		player_animator.set_movement_input(move_input)
+		# Drive idle turn animation when stationary (using look_x for angular velocity)
+		if move_input.length() < 0.1:
+			player_animator.set_idle_turn(look_input.x)
+		else:
+			player_animator.set_idle_turn(0.0)
 	
 	movement_changed.emit(move_input)
 	
@@ -159,7 +174,11 @@ func _process_gesture_data(data: Dictionary) -> void:
 	var gesture_score: float = data.get("gesture_score", 0.0)
 	var stroke_points: Array = data.get("stroke_points", [])
 	
-	# Update HUD
+	# Update HUD and stance
+	var is_casting_mode := gesture_state in ["ready_to_draw", "drawing"]
+	if player_animator:
+		player_animator.set_stance(is_casting_mode)
+	
 	if cipher_hud:
 		match gesture_state:
 			"idle":
@@ -188,16 +207,18 @@ func _on_cipher_recognized(cipher_name: String, confidence: float) -> void:
 	"""Handle successful cipher recognition - trigger animation and spell."""
 	cipher_cast.emit(cipher_name, confidence)
 	
-	# Check if this is a wind jump cipher
-	if cipher_name == wind_jump_cipher:
-		_perform_wind_jump()
-		return
-	
-	# Trigger animation for other spells
+	# Trigger ability animation via the new system
 	if player_animator:
-		player_animator.play_spell_animation(cipher_name)
+		if player_animator.play_ability_by_gesture(cipher_name):
+			# Track if this is a physics-dependent ability
+			var ability := player_animator.get_current_ability()
+			if ability in [PlayerAnimator.Ability.JUMP, PlayerAnimator.Ability.DASH_LEFT, PlayerAnimator.Ability.DASH_RIGHT]:
+				is_in_physics_ability = true
+				ability_has_launched = false
+				was_on_floor = is_on_floor()
+			return
 	
-	# Dispatch spell effect via autoload (if registered in Project Settings)
+	# Fallback: Dispatch spell effect via autoload for unrecognized gestures
 	if has_node("/root/SpellManager"):
 		var spell_mgr := get_node("/root/SpellManager")
 		if spell_mgr.has_method("cast_spell"):
@@ -220,80 +241,88 @@ func _apply_gravity(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-func _perform_wind_jump() -> void:
-	"""Perform a wind-boosted jump."""
-	if is_wind_jumping:
-		return  # Already jumping
-	
-	print("Wind Jump activated!")
-	is_wind_jumping = true
-	is_landing_triggered = false  # Reset landing state
-	jump_has_peaked = false  # Reset peak tracking
-	jump_has_launched = false  # Will be set true when velocity is applied
-	was_on_floor = false
-	
-	# Trigger jump animation - velocity applied when animation reaches launch point
-	if player_animator:
-		# Connect to launch signal (one-shot)
-		if not player_animator.jump_launch.is_connected(_on_jump_launch):
-			player_animator.jump_launch.connect(_on_jump_launch, CONNECT_ONE_SHOT)
-		player_animator.play_jump()
-	else:
-		# No animator, apply force immediately
-		velocity.y = wind_jump_force
-	
-	# TODO: Add wind particle effects here
-
 func _on_jump_launch() -> void:
 	"""Called by animator when it's time to apply jump velocity."""
+	if ability_has_launched:
+		return  # Guard against multiple calls
 	print("Jump launched! Applying force: ", wind_jump_force)
 	velocity.y = wind_jump_force
-	jump_has_launched = true
+	ability_has_launched = true
+
+
+func _on_dash_impulse(direction: Vector3) -> void:
+	"""Called by animator when it's time to apply dash velocity.
+	Works like jump but with horizontal movement added."""
+	if ability_has_launched:
+		return  # Guard against multiple calls
+	if not camera_rig:
+		return
+	
+	# Transform direction from local to world space based on camera
+	var right := camera_rig.get_right_direction()
+	var world_direction := right * direction.x
+	
+	print("Dash launched! Direction: ", world_direction, " Horizontal: ", dash_speed, " Vertical: ", dash_jump_force)
+	
+	# Apply vertical force (like jump)
+	velocity.y = dash_jump_force
+	
+	# Apply horizontal force
+	velocity.x = world_direction.x * dash_speed
+	velocity.z = world_direction.z * dash_speed
+	
+	ability_has_launched = true
+
+
+func _on_landing_finished() -> void:
+	"""Called by animator when landing animation completes."""
+	print("Landing finished, resetting physics ability state")
+	is_in_physics_ability = false
+	ability_has_launched = false
+
+
+func _on_spell_effect(ability: int) -> void:
+	"""Called by animator when spell effect should trigger."""
+	if not has_node("/root/SpellManager"):
+		return
+	
+	var spell_mgr := get_node("/root/SpellManager")
+	if not spell_mgr.has_method("cast_spell"):
+		return
+	
+	# Map ability index back to cipher name for SpellManager
+	var cipher_name := ""
+	for gesture in player_animator.gesture_ability_map:
+		if player_animator.gesture_ability_map[gesture] == ability:
+			cipher_name = gesture
+			break
+	
+	if cipher_name != "":
+		spell_mgr.cast_spell(cipher_name, _get_spell_origin(), _get_spell_direction())
 
 func _update_air_state() -> void:
-	"""Update animator based on air state (for jump/fall/land transitions)."""
+	"""Update animator based on air state (for physics-dependent abilities)."""
 	var on_floor := is_on_floor()
 	
-	# Track when we've reached the peak of the jump (velocity goes from positive to negative)
-	# Only check after we've actually launched (velocity applied)
-	if is_wind_jumping and jump_has_launched and velocity.y <= 0 and not jump_has_peaked:
-		jump_has_peaked = true
-		print("Jump peaked, now falling")
-		if player_animator:
-			player_animator.set_falling()
-	
-	# Fully landed - reset state
-	if on_floor and not was_on_floor and jump_has_peaked:
-		if is_wind_jumping:
-			# Only trigger landing if we haven't already (raycast anticipation)
-			if not is_landing_triggered and player_animator:
-				player_animator.play_landing()
-			# Wind jump ends after landing animation
-			if player_animator:
-				await player_animator.landing_finished
-			is_wind_jumping = false
-			is_landing_triggered = false
-			jump_has_peaked = false
-			jump_has_launched = false
-	
-	# Only check for landing anticipation AFTER we've peaked (going down)
-	if not on_floor and is_wind_jumping and jump_has_peaked:
-		# Check for approaching ground (landing anticipation)
-		if ground_raycast and ground_raycast.is_colliding():
-			var collision_point := ground_raycast.get_collision_point()
-			var distance_to_ground := global_position.y - collision_point.y
-			
-			# Trigger landing animation early when approaching ground
-			if distance_to_ground <= landing_detection_height and not is_landing_triggered:
-				is_landing_triggered = true
-				if player_animator:
-					player_animator.play_landing()
-					print("Landing anticipation triggered at height: ", distance_to_ground)
+	# Update the animator's sub-state machine if in a physics ability
+	if is_in_physics_ability and player_animator and player_animator.is_in_physics_ability():
+		player_animator.update_floor_status(on_floor, velocity.y)
+		
+		# Early landing via raycast anticipation
+		if not on_floor and ability_has_launched and velocity.y < 0:
+			if ground_raycast and ground_raycast.is_colliding():
+				var collision_point := ground_raycast.get_collision_point()
+				var distance_to_ground := global_position.y - collision_point.y
+				
+				if distance_to_ground <= landing_detection_height:
+					player_animator.trigger_early_landing()
+					print("Landing anticipation at height: ", distance_to_ground)
 	
 	was_on_floor = on_floor
 
 func _apply_movement(_delta: float) -> void:
-	"""Apply movement based on camera direction and lean input."""
+	"""Apply movement based on camera direction and lean input.
+	During physics abilities, momentum is preserved based on dash_air_control."""
 	if not camera_rig:
 		return
 	
@@ -303,8 +332,13 @@ func _apply_movement(_delta: float) -> void:
 	# Combine strafe (x) and walk (y) into target velocity
 	var target_vel := right * move_input.x * strafe_speed + forward * move_input.y * walk_speed
 	
-	velocity.x = lerp(velocity.x, target_vel.x, move_smoothing)
-	velocity.z = lerp(velocity.z, target_vel.z, move_smoothing)
+	# During physics abilities, use air_control to blend between momentum and input
+	var smoothing := move_smoothing
+	if is_in_physics_ability:
+		smoothing = move_smoothing * dash_air_control  # 0 = full momentum, 1 = full control
+	
+	velocity.x = lerp(velocity.x, target_vel.x, smoothing)
+	velocity.z = lerp(velocity.z, target_vel.z, smoothing)
 
 func _update_character_rotation(delta: float) -> void:
 	"""Smoothly rotate the player model to face camera forward direction."""
