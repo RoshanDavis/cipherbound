@@ -5,12 +5,8 @@ extends Node
 # --- PLAYER STATS ---
 @export_group("Player Stats")
 @export var max_health := 100.0
-@export var max_mana := 100.0
-@export var mana_regen_rate := 5.0  ## Mana per second
-@export var mana_cost_default := 10.0  ## Default spell cost
 
 var current_health: float
-var current_mana: float
 
 # --- WAVE SYSTEM ---
 @export_group("Wave System")
@@ -24,11 +20,10 @@ var is_wave_active := false
 
 # --- GAME STATE ---
 enum GameState { MENU, PLAYING, PAUSED, GAME_OVER, VICTORY }
-var game_state: GameState = GameState.PLAYING
+var game_state: GameState = GameState.MENU
 
 # --- SIGNALS ---
 signal health_changed(current: float, maximum: float)
-signal mana_changed(current: float, maximum: float)
 signal wave_started(wave_number: int, enemy_count: int)
 signal wave_completed(wave_number: int)
 signal enemy_killed(enemy: Node, points: int)
@@ -40,22 +35,16 @@ func _ready() -> void:
 	reset_stats()
 	print("GameManager initialized")
 
-func _process(delta: float) -> void:
-	if game_state == GameState.PLAYING:
-		_regenerate_mana(delta)
-
 # --- STAT MANAGEMENT ---
 func reset_stats() -> void:
 	"""Reset all player stats to starting values."""
 	current_health = max_health
-	current_mana = max_mana
 	current_wave = 0
 	enemies_remaining = 0
 	total_enemies_killed = 0
 	score = 0
 	is_wave_active = false
 	health_changed.emit(current_health, max_health)
-	mana_changed.emit(current_mana, max_mana)
 	score_changed.emit(score)
 
 func take_damage(amount: float) -> void:
@@ -73,25 +62,6 @@ func heal(amount: float) -> void:
 	"""Heal the player."""
 	current_health = minf(max_health, current_health + amount)
 	health_changed.emit(current_health, max_health)
-
-func use_mana(amount: float) -> bool:
-	"""Attempt to use mana. Returns true if successful."""
-	if current_mana >= amount:
-		current_mana -= amount
-		mana_changed.emit(current_mana, max_mana)
-		return true
-	return false
-
-func restore_mana(amount: float) -> void:
-	"""Restore mana to the player."""
-	current_mana = minf(max_mana, current_mana + amount)
-	mana_changed.emit(current_mana, max_mana)
-
-func _regenerate_mana(delta: float) -> void:
-	"""Regenerate mana over time."""
-	if current_mana < max_mana:
-		current_mana = minf(max_mana, current_mana + mana_regen_rate * delta)
-		mana_changed.emit(current_mana, max_mana)
 
 # --- WAVE MANAGEMENT ---
 func start_wave(wave_number: int, enemy_count: int) -> void:
@@ -125,6 +95,11 @@ func add_score(points: int) -> void:
 	score_changed.emit(score)
 
 # --- GAME STATE ---
+func start_game() -> void:
+	"""Start the game from menu state."""
+	reset_stats()
+	set_game_state(GameState.PLAYING)
+
 func set_game_state(new_state: GameState) -> void:
 	"""Change game state."""
 	if game_state != new_state:
@@ -137,7 +112,7 @@ func set_game_state(new_state: GameState) -> void:
 			GameState.PLAYING:
 				get_tree().paused = false
 			GameState.GAME_OVER, GameState.VICTORY:
-				get_tree().paused = true
+				pass  # Don't pause — let death screen handle it
 
 func pause_game() -> void:
 	set_game_state(GameState.PAUSED)
@@ -155,13 +130,3 @@ func restart_game() -> void:
 	reset_stats()
 	set_game_state(GameState.PLAYING)
 	get_tree().reload_current_scene()
-
-# --- SPELL INTEGRATION ---
-func get_spell_mana_cost(_spell_name: String) -> float:
-	"""Get mana cost for a spell. Override in spell_registry if needed."""
-	# Default cost, can be extended to read from SpellManager
-	return mana_cost_default
-
-func can_cast_spell(spell_name: String) -> bool:
-	"""Check if player has enough mana to cast a spell."""
-	return current_mana >= get_spell_mana_cost(spell_name)

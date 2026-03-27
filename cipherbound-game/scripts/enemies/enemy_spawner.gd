@@ -44,6 +44,10 @@ func _ready() -> void:
 	
 	if auto_start:
 		call_deferred("start_waves")
+	elif has_node("/root/GameManager"):
+		var gm := get_node("/root/GameManager")
+		if gm.game_state == gm.GameState.PLAYING:
+			call_deferred("start_waves")
 
 func _setup_default_waves() -> void:
 	"""Create default waves if none configured."""

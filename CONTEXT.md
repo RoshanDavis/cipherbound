@@ -246,14 +246,22 @@ ROOT (cipherbound/)
 - [x] **Manager Systems:** GameManager, AudioManager, SceneManager autoloads.
 - [x] **UI System:** GameHUD with health/mana bars, wave info, cipher visualization.
 - [x] **Enemy System:** Base enemy class with AI state machine, wave spawning.
+- [x] **Enemy AI Fix:** Player added to `"player"` group via `player_controller.gd` `_ready()`. Enemies now detect and chase the player.
+
+### Known Issues ⚠️
+- **No NavigationRegion3D:** `game.tscn` lacks a `NavigationRegion3D` with a baked navmesh. Enemies fall back to direct line-of-sight movement (no obstacle avoidance). Add a `NavigationRegion3D` and bake a navmesh for proper pathfinding.
+- **Slime DetectionArea:** `collision_layer = 0` with default `collision_mask = 1`. Works for detecting the player on layer 1, but if the player's collision layer changes, the mask must be updated to match.
+- **EnemySpawner Timing:** `_find_player()` in `enemy_spawner.gd` runs in `_ready()`, which may execute before the player's `_ready()` adds it to the `"player"` group. The `spawn_around_player` feature may not work on the first frame; enemies still find the player independently via `base_enemy.gd`.
+- **Audio/Music Assets:** All SFX and music library entries are `null` — no audio files have been added yet.
 
 ### Next Goals 🎯
-1. **AnimationTree Editor Setup:** Build the tree structure in Godot (see setup guide below).
-2. **Add Animations to Libraries:** Import FBX animations into library .res files.
-3. **Add Call Method Tracks:** Keyframe animation events in AnimationPlayer.
-4. **Audio Assets:** Add sound effects and music tracks to AudioManager.
-5. **Game Environment:** Create a test dungeon/arena with navigation mesh.
-6. **Polish & Balancing:** Tune enemy stats, wave difficulty, spell costs.
+1. **Navigation Mesh:** Add a `NavigationRegion3D` to `game.tscn` and bake a navmesh so enemies can pathfind around obstacles.
+2. **AnimationTree Editor Setup:** Build the tree structure in Godot (see setup guide below).
+3. **Add Animations to Libraries:** Import FBX animations into library .res files.
+4. **Add Call Method Tracks:** Keyframe animation events in AnimationPlayer.
+5. **Audio Assets:** Add sound effects and music tracks to AudioManager.
+6. **Game Environment:** Create a test dungeon/arena with environment art.
+7. **Polish & Balancing:** Tune enemy stats, wave difficulty, spell costs.
 
 ## 9. Spell Effects System
 
@@ -537,6 +545,16 @@ hud.update_stroke([[100, 200], [150, 250], [200, 200]])
 ```
 
 ## 12. Enemy System
+
+### Critical Requirement: Player Group
+The player **must** be in the `"player"` group for enemies to detect it. This is handled automatically by `player_controller.gd` calling `add_to_group("player")` in `_ready()`. Both `base_enemy.gd` `_find_player()` and `enemy_spawner.gd` `_find_player()` rely on `get_nodes_in_group("player")`.
+
+### Collision Layer Setup
+| Node | Collision Layer | Collision Mask | Purpose |
+|------|----------------|----------------|----------|
+| Player (CharacterBody3D) | 1 (default) | 1 (default) | Player physics body |
+| Slime (CharacterBody3D) | 4 | 3 (layers 1+2) | Enemy body, detects player + environment |
+| Slime DetectionArea (Area3D) | 0 (none) | 1 (default) | Monitors player entering detection radius |
 
 ### BaseEnemy
 Base class for all enemies with health, AI states, and combat.

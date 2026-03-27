@@ -1,21 +1,50 @@
-[gd_scene load_steps=3 format=3 uid="uid://projectile_core_particles"]
+[gd_scene load_steps=9 format=3 uid="uid://projectile_core_particles"]
+
+[sub_resource type="Curve" id="Curve_alpha"]
+_data = [Vector2(0, 0.5), 0.0, 0.0, 0, 0, Vector2(0.3, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.5), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_alpha"]
+curve = SubResource("Curve_alpha")
+
+[sub_resource type="Curve" id="Curve_scale"]
+_data = [Vector2(0, 0.5), 0.0, 0.0, 0, 0, Vector2(0.3, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.3), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_scale"]
+curve = SubResource("Curve_scale")
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_core"]
-direction = Vector3(0, 0, 0)
+emission_shape = 1
+emission_sphere_radius = 0.15
 spread = 180.0
-initial_velocity_min = 0.2
-initial_velocity_max = 0.5
+initial_velocity_min = 0.3
+initial_velocity_max = 0.8
 gravity = Vector3(0, 0, 0)
-scale_min = 0.08
-scale_max = 0.15
-color = Color(1, 0.85, 0.2, 1)
+scale_min = 0.3
+scale_max = 0.8
+scale_curve = SubResource("CurveTexture_scale")
+color = Color(1, 0.85, 0.15, 1)
+alpha_curve = SubResource("CurveTexture_alpha")
 
-[sub_resource type="QuadMesh" id="QuadMesh_core"]
-size = Vector2(0.2, 0.2)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_core"]
+transparency = 1
+blend_mode = 1
+billboard_mode = 3
+vertex_color_use_as_albedo = true
+emission_enabled = true
+emission = Color(1, 0.9, 0.2, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_core"]
+material = SubResource("StandardMaterial3D_core")
+radial_segments = 8
+rings = 4
 
 [node name="ProjectileCoreParticles" type="GPUParticles3D"]
+emitting = false
 amount = 15
-lifetime = 0.3
+lifetime = 0.25
 one_shot = false
 process_material = SubResource("ParticleProcessMaterial_core")
-draw_pass_1 = SubResource("QuadMesh_core")
+draw_pass_1 = SubResource("SphereMesh_core")

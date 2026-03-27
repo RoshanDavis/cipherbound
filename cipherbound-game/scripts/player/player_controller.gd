@@ -30,7 +30,7 @@ var server := UDPServer.new()
 # --- COMPONENT REFERENCES ---
 var camera_rig: CameraRig
 var player_animator: PlayerAnimator
-var cipher_hud: GameHUD  ## Consolidated game HUD (health, mana, cipher drawing)
+var cipher_hud: GameHUD  ## Consolidated game HUD (health, cipher drawing)
 var spell_origin: Marker3D  ## Where spells spawn from (hand level)
 var ground_raycast: RayCast3D  ## Detects ground for landing anticipation
 
@@ -55,6 +55,7 @@ signal cipher_cast(cipher_name: String, confidence: float)
 signal movement_changed(input: Vector2)
 
 func _ready() -> void:
+	add_to_group("player")
 	_setup_components()
 	_start_network()
 
@@ -269,25 +270,43 @@ func _process_gesture_data(data: Dictionary) -> void:
 		last_recognized_gesture = ""
 
 func _on_cipher_recognized(cipher_name: String, confidence: float) -> void:
-	"""Handle successful cipher recognition - trigger animation and spell."""
+	"""Handle successful cipher recognition - trigger animation and spell effect."""
 	cipher_cast.emit(cipher_name, confidence)
 	
-	# Trigger ability animation via the new system
+	# Always dispatch spell effect immediately (particles + damage)
+	_dispatch_spell(cipher_name)
+	
+	# Trigger ability animation via the animation system
 	if player_animator:
 		if player_animator.play_ability_by_gesture(cipher_name):
-			# Track if this is a physics-dependent ability
 			var ability := player_animator.get_current_ability()
 			if ability in [PlayerAnimator.Ability.JUMP, PlayerAnimator.Ability.DASH_LEFT, PlayerAnimator.Ability.DASH_RIGHT]:
 				is_in_physics_ability = true
 				ability_has_launched = false
 				was_on_floor = is_on_floor()
-			return
-	
-	# Fallback: Dispatch spell effect via autoload for unrecognized gestures
+
+func _dispatch_spell(cipher_name: String) -> void:
+	"""Dispatch a spell effect via SpellManager."""
 	if has_node("/root/SpellManager"):
 		var spell_mgr := get_node("/root/SpellManager")
 		if spell_mgr.has_method("cast_spell"):
 			spell_mgr.cast_spell(cipher_name, _get_spell_origin(), _get_spell_direction())
+
+func _on_spell_effect(ability: int) -> void:
+	"""Called by animator when spell effect should trigger (from Call Method Track).
+	Used for physics abilities (jump/dash) that need animation-timed effects."""
+	if not player_animator:
+		return
+	
+	# Map ability index back to cipher name
+	var cipher_name := ""
+	for gesture in player_animator.gesture_ability_map:
+		if player_animator.gesture_ability_map[gesture] == ability:
+			cipher_name = gesture
+			break
+	
+	if cipher_name != "":
+		_dispatch_spell(cipher_name)
 
 func _get_spell_origin() -> Vector3:
 	"""Get the world position where spells should spawn."""
@@ -314,7 +333,6 @@ func _on_jump_launch() -> void:
 	velocity.y = wind_jump_force
 	ability_has_launched = true
 
-
 func _on_dash_impulse(direction: Vector3) -> void:
 	"""Called by animator when it's time to apply dash velocity.
 	Works like jump but with horizontal movement added."""
@@ -338,32 +356,11 @@ func _on_dash_impulse(direction: Vector3) -> void:
 	
 	ability_has_launched = true
 
-
 func _on_landing_finished() -> void:
 	"""Called by animator when landing animation completes."""
 	print("Landing finished, resetting physics ability state")
 	is_in_physics_ability = false
 	ability_has_launched = false
-
-
-func _on_spell_effect(ability: int) -> void:
-	"""Called by animator when spell effect should trigger."""
-	if not has_node("/root/SpellManager"):
-		return
-	
-	var spell_mgr := get_node("/root/SpellManager")
-	if not spell_mgr.has_method("cast_spell"):
-		return
-	
-	# Map ability index back to cipher name for SpellManager
-	var cipher_name := ""
-	for gesture in player_animator.gesture_ability_map:
-		if player_animator.gesture_ability_map[gesture] == ability:
-			cipher_name = gesture
-			break
-	
-	if cipher_name != "":
-		spell_mgr.cast_spell(cipher_name, _get_spell_origin(), _get_spell_direction())
 
 func _update_air_state() -> void:
 	"""Update animator based on air state (for physics-dependent abilities)."""

@@ -1,30 +1,26 @@
-[gd_scene load_steps=5 format=3 uid="uid://slime_enemy_scene"]
+[gd_scene load_steps=7 format=3 uid="uid://bbtgrre81gan4"]
 
-[ext_resource type="Script" path="res://scripts/enemies/base_enemy.gd" id="1_base_enemy"]
+[ext_resource type="Script" uid="uid://crjilcp8wjog8" path="res://scripts/enemies/slime.gd" id="1_rldp6"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_body"]
-radius = 0.5
 
 [sub_resource type="SphereMesh" id="SphereMesh_slime"]
-radius = 0.5
-height = 1.0
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_detection"]
 radius = 10.0
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rldp6"]
+albedo_color = Color(0, 0, 0, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ahq63"]
+material = SubResource("StandardMaterial3D_rldp6")
+
 [node name="Slime" type="CharacterBody3D"]
 collision_layer = 4
 collision_mask = 3
-script = ExtResource("1_base_enemy")
-max_health = 30.0
-move_speed = 2.0
-chase_speed = 4.0
-attack_damage = 10.0
-attack_range = 1.5
-detection_range = 10.0
-attack_cooldown = 2.0
-score_value = 100
-mesh_color = Color(0.2, 0.8, 0.3, 1)
+script = ExtResource("1_rldp6")
+chase_speed = 3.0
+contact_damage = 1.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -36,12 +32,19 @@ mesh = SubResource("SphereMesh_slime")
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.5
-target_desired_distance = 1.0
 avoidance_enabled = true
 
 [node name="DetectionArea" type="Area3D" parent="."]
 collision_layer = 0
-collision_mask = 1
+monitorable = false
 
 [node name="DetectionShape" type="CollisionShape3D" parent="DetectionArea"]
 shape = SubResource("SphereShape3D_detection")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.17984925, 0, 0, 0, 0.019794628, -0.27205047, 0, 0.041959226, 0.12834214, -0.14832711, 0.76689655, 0.40400922)
+mesh = SubResource("CylinderMesh_ahq63")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.17984925, 0, 0, 0, 0.019794628, -0.27205047, 0, 0.041959226, 0.12834214, 0.14456719, 0.76689655, 0.40400922)
+mesh = SubResource("CylinderMesh_ahq63")

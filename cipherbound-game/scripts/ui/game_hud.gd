@@ -1,13 +1,10 @@
 extends CanvasLayer
 class_name GameHUD
-## GameHUD - Main game UI with health/mana bars, wave info, cipher drawing, and spell feedback.
-## Consolidates all UI functionality including the old CipherHUD.
+## GameHUD - Main game UI with health bar, wave info, cipher drawing, menus.
 
 # --- NODE REFERENCES ---
 @onready var health_bar: ProgressBar = $MarginContainer/VBoxContainer/HealthContainer/HealthBar
 @onready var health_label: Label = $MarginContainer/VBoxContainer/HealthContainer/HealthLabel
-@onready var mana_bar: ProgressBar = $MarginContainer/VBoxContainer/ManaContainer/ManaBar
-@onready var mana_label: Label = $MarginContainer/VBoxContainer/ManaContainer/ManaLabel
 @onready var wave_label: Label = $TopRight/WaveLabel
 @onready var score_label: Label = $TopRight/ScoreLabel
 @onready var spell_feedback: Label = $CenterContainer/SpellFeedback
@@ -16,26 +13,25 @@ class_name GameHUD
 
 # --- CONFIGURATION ---
 @export_group("Bar Settings")
-@export var health_color := Color(0.8, 0.2, 0.2)  ## Red
+@export var health_color := Color(0.8, 0.2, 0.2) ## Red
 @export var health_bg_color := Color(0.3, 0.1, 0.1)
-@export var mana_color := Color(0.2, 0.4, 0.9)  ## Blue
-@export var mana_bg_color := Color(0.1, 0.15, 0.3)
-@export var bar_smooth_speed := 10.0  ## How fast bars animate
+@export var bar_smooth_speed := 10.0 ## How fast bars animate
 
 @export_group("Feedback")
+@export var show_spell_feedback := false ## Show big centered spell name on cast
+@export var show_status_label := false ## Show tracking status at bottom
 @export var feedback_duration := 2.0
 @export var feedback_fade_time := 0.5
 
 @export_group("Cipher Drawing")
-@export var trail_color := Color(0.3, 0.8, 1.0, 0.9)  ## Cyan glow
+@export var trail_color := Color(0.3, 0.8, 1.0, 0.9) ## Cyan glow
 @export var trail_width := 4.0
 @export var trail_fade_time := 1.5
-@export var success_color := Color(0.2, 1.0, 0.4)  ## Green
-@export var fail_color := Color(1.0, 0.3, 0.3)  ## Red
+@export var success_color := Color(0.2, 1.0, 0.4) ## Green
+@export var fail_color := Color(1.0, 0.3, 0.3) ## Red
 
 # --- INTERNAL STATE ---
 var _target_health := 100.0
-var _target_mana := 100.0
 var _feedback_timer := 0.0
 
 # --- CIPHER DRAWING STATE ---
@@ -49,7 +45,13 @@ var is_beautifying := false
 var _is_showing_result := false
 const BEAUTIFY_DURATION := 0.3
 
-# --- Reference for draw_canvas compatibility (Player.gd accesses this) ---
+# --- MENU PANELS ---
+var _main_menu_panel: PanelContainer
+var _death_screen_panel: PanelContainer
+var _death_score_label: Label
+var _death_kills_label: Label
+
+# --- Reference for draw_canvas compatibility ---
 var draw_canvas: Control:
 	get:
 		return cipher_canvas
@@ -59,6 +61,15 @@ func _ready() -> void:
 	_setup_bars()
 	_hide_feedback()
 	_setup_cipher_canvas()
+	_create_main_menu()
+	_create_death_screen()
+	
+	# Show correct panel based on game state
+	if has_node("/root/GameManager"):
+		var gm := get_node("/root/GameManager")
+		if gm.game_state == gm.GameState.MENU:
+			_show_main_menu()
+	
 	print("GameHUD initialized")
 
 func _process(delta: float) -> void:
@@ -71,15 +82,15 @@ func _connect_signals() -> void:
 	if has_node("/root/GameManager"):
 		var gm := get_node("/root/GameManager")
 		gm.health_changed.connect(_on_health_changed)
-		gm.mana_changed.connect(_on_mana_changed)
 		gm.wave_started.connect(_on_wave_started)
 		gm.wave_completed.connect(_on_wave_completed)
 		gm.score_changed.connect(_on_score_changed)
 		gm.enemy_killed.connect(_on_enemy_killed)
+		gm.game_over.connect(_on_game_over)
+		gm.game_state_changed.connect(_on_game_state_changed)
 		
 		# Initialize with current values
 		_on_health_changed(gm.current_health, gm.max_health)
-		_on_mana_changed(gm.current_mana, gm.max_mana)
 		_on_score_changed(gm.score)
 
 func _setup_bars() -> void:
@@ -100,23 +111,6 @@ func _setup_bars() -> void:
 		health_bg.corner_radius_bottom_left = 4
 		health_bg.corner_radius_bottom_right = 4
 		health_bar.add_theme_stylebox_override("background", health_bg)
-	
-	if mana_bar:
-		var mana_style := StyleBoxFlat.new()
-		mana_style.bg_color = mana_color
-		mana_style.corner_radius_top_left = 4
-		mana_style.corner_radius_top_right = 4
-		mana_style.corner_radius_bottom_left = 4
-		mana_style.corner_radius_bottom_right = 4
-		mana_bar.add_theme_stylebox_override("fill", mana_style)
-		
-		var mana_bg := StyleBoxFlat.new()
-		mana_bg.bg_color = mana_bg_color
-		mana_bg.corner_radius_top_left = 4
-		mana_bg.corner_radius_top_right = 4
-		mana_bg.corner_radius_bottom_left = 4
-		mana_bg.corner_radius_bottom_right = 4
-		mana_bar.add_theme_stylebox_override("background", mana_bg)
 
 func _setup_cipher_canvas() -> void:
 	"""Setup cipher drawing canvas."""
@@ -127,8 +121,6 @@ func _update_bar_smoothing(delta: float) -> void:
 	"""Smoothly animate bar values."""
 	if health_bar:
 		health_bar.value = lerpf(health_bar.value, _target_health, bar_smooth_speed * delta)
-	if mana_bar:
-		mana_bar.value = lerpf(mana_bar.value, _target_mana, bar_smooth_speed * delta)
 
 func _update_feedback_fade(delta: float) -> void:
 	"""Fade out spell feedback over time."""
@@ -151,13 +143,6 @@ func _on_health_changed(current: float, maximum: float) -> void:
 	if health_label:
 		health_label.text = "%d / %d" % [int(current), int(maximum)]
 
-func _on_mana_changed(current: float, maximum: float) -> void:
-	_target_mana = (current / maximum) * 100.0
-	if mana_bar:
-		mana_bar.max_value = 100.0
-	if mana_label:
-		mana_label.text = "%d / %d" % [int(current), int(maximum)]
-
 func _on_wave_started(wave_number: int, enemy_count: int) -> void:
 	if wave_label:
 		wave_label.text = "Wave %d" % wave_number
@@ -173,9 +158,26 @@ func _on_score_changed(new_score: int) -> void:
 func _on_enemy_killed(_enemy: Node, _points: int) -> void:
 	pass
 
-# --- PUBLIC API: HEALTH/MANA ---
+func _on_game_over(victory: bool) -> void:
+	if victory:
+		show_feedback("VICTORY!", 5.0)
+	else:
+		_show_death_screen()
+
+func _on_game_state_changed(new_state: int) -> void:
+	# GameState enum values: MENU=0, PLAYING=1, PAUSED=2, GAME_OVER=3, VICTORY=4
+	match new_state:
+		0: # MENU
+			_show_main_menu()
+		1: # PLAYING
+			_hide_main_menu()
+			_hide_death_screen()
+
+# --- PUBLIC API ---
 func show_feedback(text: String, duration: float = -1.0) -> void:
 	"""Show centered spell/event feedback."""
+	if not show_spell_feedback:
+		return
 	if spell_feedback:
 		spell_feedback.text = text
 		spell_feedback.visible = true
@@ -191,9 +193,176 @@ func update_health(current: float, maximum: float) -> void:
 	"""Manually update health (if not using GameManager)."""
 	_on_health_changed(current, maximum)
 
-func update_mana(current: float, maximum: float) -> void:
-	"""Manually update mana (if not using GameManager)."""
-	_on_mana_changed(current, maximum)
+# ============================================================================
+# MAIN MENU
+# ============================================================================
+
+func _create_main_menu() -> void:
+	"""Create the main menu overlay."""
+	_main_menu_panel = PanelContainer.new()
+	_main_menu_panel.name = "MainMenu"
+	_main_menu_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_main_menu_panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	_main_menu_panel.visible = false
+	
+	# Dark overlay
+	var overlay_style := StyleBoxFlat.new()
+	overlay_style.bg_color = Color(0, 0, 0, 0.75)
+	_main_menu_panel.add_theme_stylebox_override("panel", overlay_style)
+	
+	# Center container
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_main_menu_panel.add_child(center)
+	
+	# Content
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 30)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(vbox)
+	
+	# Title
+	var title := Label.new()
+	title.text = "CIPHERBOUND"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 64)
+	title.add_theme_color_override("font_color", Color(0.3, 0.9, 1))
+	vbox.add_child(title)
+	
+	# Subtitle
+	var subtitle := Label.new()
+	subtitle.text = "Cast spells with gestures"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 20)
+	subtitle.add_theme_color_override("font_color", Color(0.7, 0.7, 0.8))
+	vbox.add_child(subtitle)
+	
+	# Spacer
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 20
+	vbox.add_child(spacer)
+	
+	# Start button
+	var start_btn := Button.new()
+	start_btn.text = "START GAME"
+	start_btn.custom_minimum_size = Vector2(250, 60)
+	start_btn.add_theme_font_size_override("font_size", 24)
+	start_btn.pressed.connect(_on_start_pressed)
+	vbox.add_child(start_btn)
+	
+	add_child(_main_menu_panel)
+
+func _show_main_menu() -> void:
+	if _main_menu_panel:
+		_main_menu_panel.visible = true
+
+func _hide_main_menu() -> void:
+	if _main_menu_panel:
+		_main_menu_panel.visible = false
+
+func _on_start_pressed() -> void:
+	if has_node("/root/GameManager"):
+		var gm := get_node("/root/GameManager")
+		gm.start_game()
+	_hide_main_menu()
+	
+	# Start enemy spawner if present
+	var spawner := get_tree().root.get_node_or_null("Game/EnemySpawner")
+	if spawner and spawner.has_method("start_waves"):
+		spawner.start_waves()
+
+# ============================================================================
+# DEATH SCREEN
+# ============================================================================
+
+func _create_death_screen() -> void:
+	"""Create the death/game over screen overlay."""
+	_death_screen_panel = PanelContainer.new()
+	_death_screen_panel.name = "DeathScreen"
+	_death_screen_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_death_screen_panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	_death_screen_panel.visible = false
+	
+	# Dark red overlay
+	var overlay_style := StyleBoxFlat.new()
+	overlay_style.bg_color = Color(0.15, 0, 0, 0.8)
+	_death_screen_panel.add_theme_stylebox_override("panel", overlay_style)
+	
+	# Center container
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_death_screen_panel.add_child(center)
+	
+	# Content
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 20)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(vbox)
+	
+	# Title
+	var title := Label.new()
+	title.text = "GAME OVER"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 56)
+	title.add_theme_color_override("font_color", Color(0.9, 0.2, 0.2))
+	vbox.add_child(title)
+	
+	# Score label (updated on show)
+	var death_score := Label.new()
+	death_score.name = "DeathScore"
+	death_score.text = "Score: 0"
+	death_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	death_score.add_theme_font_size_override("font_size", 28)
+	death_score.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	vbox.add_child(death_score)
+	_death_score_label = death_score
+	
+	# Enemies killed
+	var kills_label := Label.new()
+	kills_label.name = "KillsLabel"
+	kills_label.text = "Enemies Defeated: 0"
+	kills_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	kills_label.add_theme_font_size_override("font_size", 20)
+	kills_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+	vbox.add_child(kills_label)
+	_death_kills_label = kills_label
+	
+	# Spacer
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 20
+	vbox.add_child(spacer)
+	
+	# Restart button
+	var restart_btn := Button.new()
+	restart_btn.text = "RESTART"
+	restart_btn.custom_minimum_size = Vector2(250, 60)
+	restart_btn.add_theme_font_size_override("font_size", 24)
+	restart_btn.pressed.connect(_on_restart_pressed)
+	vbox.add_child(restart_btn)
+	
+	add_child(_death_screen_panel)
+
+func _show_death_screen() -> void:
+	if _death_screen_panel:
+		_death_screen_panel.visible = true
+		
+		# Update score/kills from GameManager
+		if has_node("/root/GameManager"):
+			var gm := get_node("/root/GameManager")
+			if _death_score_label:
+				_death_score_label.text = "Score: %d" % gm.score
+			if _death_kills_label:
+				_death_kills_label.text = "Enemies Defeated: %d  |  Wave: %d" % [gm.total_enemies_killed, gm.current_wave]
+
+func _hide_death_screen() -> void:
+	if _death_screen_panel:
+		_death_screen_panel.visible = false
+
+func _on_restart_pressed() -> void:
+	_hide_death_screen()
+	if has_node("/root/GameManager"):
+		var gm := get_node("/root/GameManager")
+		gm.restart_game()
 
 # ============================================================================
 # CIPHER DRAWING SYSTEM (consolidated from CipherHUD)
@@ -379,7 +548,12 @@ func clear_stroke() -> void:
 # --- INTERNAL HELPERS ---
 func _set_status(text: String, color: Color) -> void:
 	"""Set status label text and color."""
+	if not show_status_label:
+		if status_label:
+			status_label.visible = false
+		return
 	if status_label:
+		status_label.visible = true
 		status_label.text = text
 		status_label.add_theme_color_override("font_color", color)
 

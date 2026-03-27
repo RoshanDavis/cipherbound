@@ -7,168 +7,84 @@
 cd vision/src
 py main.py
 ```
-Keep this terminal running - it sends tracking data to Godot via UDP.
+Keep this terminal running — it sends tracking data to Godot via UDP.
 
 ### 2. Open Godot Project
 Open `cipherbound-game/project.godot` in Godot 4.5.
 
----
-
-## New Systems Setup
-
-### Autoloads (Already Configured)
-The following autoloads are pre-registered in `project.godot`:
-- ✅ **GameManager** - Player stats, waves, game state
-- ✅ **AudioManager** - Sound effects and music
-- ✅ **SceneManager** - Scene transitions
-- ✅ **SpellManager** - Spell effects dispatch
-
-To verify: Project → Project Settings → Autoload
-
-### Add the Game HUD to Your Scene
-1. Open `scenes/game.tscn`
-2. Instance the HUD: Right-click root → **Instance Child Scene**
-3. Select `scenes/ui/game_hud.tscn`
-4. The HUD auto-connects to GameManager signals
-
-### Add the Enemy Spawner (Optional)
-1. In `scenes/game.tscn`, instance `scenes/enemies/enemy_spawner.tscn`
-2. Position it at world origin or wherever you want enemies to spawn
-3. Configure in Inspector:
-   - `Auto Start` = true (to start waves automatically)
-   - `Spawn Around Player` = true (spawn relative to player)
-   - `Spawn Radius` = 15-20 (distance from player)
-
-### Add Player to "player" Group
-For enemies to detect the player:
-1. Select the Player node in the scene tree
-2. Go to Node → Groups tab
-3. Add group: `player`
+### 3. Run the Game
+Press F5 or the Play button. The **Main Menu** will appear. Click **Start Game** to begin.
 
 ---
 
-## Audio Setup (Optional)
+## How It Works
 
-### Add Sound Effects
-1. Create folder: `assets/audio/sfx/`
-2. Add .wav or .ogg files
-3. Register in `scripts/managers/audio_manager.gd`:
-```gdscript
-func _ready() -> void:
-    # Add your sounds here
-    sfx_library["spell_cast"] = preload("res://assets/audio/sfx/spell_cast.wav")
-    sfx_library["enemy_hit"] = preload("res://assets/audio/sfx/enemy_hit.wav")
-```
-
-### Add Music
-1. Create folder: `assets/audio/music/`
-2. Add .ogg files (better for music)
-3. Register in audio_manager.gd:
-```gdscript
-music_library["battle"] = preload("res://assets/audio/music/battle.ogg")
-```
+1. **Vision Server** tracks your hands via webcam
+2. **Draw ciphers** by opening your left hand (activate), then pointing with your right hand (draw)
+3. Each recognized cipher casts a **spell** that spawns glowing particles and damages enemies
+4. Enemies spawn in waves and chase you — survive as long as you can!
 
 ---
 
-## Testing the Systems
+## Spell List
 
-### Test Health/Mana (in any script or console)
-```gdscript
-# Take damage
-GameManager.take_damage(20)
-
-# Use mana
-GameManager.use_mana(15)
-
-# Heal
-GameManager.heal(10)
-```
-
-### Test Wave Spawning
-```gdscript
-# Start waves manually
-$EnemySpawner.start_waves()
-
-# Or spawn a single enemy
-$EnemySpawner.spawn_enemy_at("slime", Vector3(10, 0, 5))
-```
-
-### Test Scene Transitions
-```gdscript
-SceneManager.change_scene("game")
-SceneManager.reload_current_scene()
-```
+| Cipher | Spell | Effect | Damage |
+|--------|-------|--------|--------|
+| Air Blast | Jump | AOE at feet | 15 |
+| Arrow Right | Dash Right | AOE at feet | 10 |
+| Arrow Left | Dash Left | AOE at feet | 10 |
+| Water | Ground Smash | AOE in front | 25 |
+| Shield / Circle | Shield | Continuous AOE | 5/tick |
+| Lightning | Projectile | Forward-moving | 20 |
+| Swipe | Horizontal Slash | AOE in front | 12 |
+| Swipe Vertical | Vertical Strike | AOE in front | 12 |
 
 ---
 
-## AnimationTree Setup (If Not Done)
+## Game Flow
 
-The AnimationTree needs to be built in Godot's editor. Follow section **8. AnimationTree Editor Setup Guide** in CONTEXT.md for full instructions.
-
-**Quick checklist:**
-- [ ] PlayerAnimator has script attached
-- [ ] Root StateMachine with: Locomotion, Cipher Casting, Death
-- [ ] Locomotion has Stance transition (Basic/Cipher BlendSpace2D)
-- [ ] Each BlendSpace2D has nested BlendSpace1D at (0,0) for idle turning
-- [ ] Cipher Casting has AbilitySelector with 8 inputs
-- [ ] Jump/Dash are sub-StateMachines: Action → Fall → Land
-- [ ] Call Method Tracks added to animations for events
+- **Main Menu** → Click "Start Game"
+- **Waves** spawn enemies (slimes) that chase and damage you
+- **Cast spells** to kill enemies and earn points
+- **Game Over** → Shows score + restart button
+- Health bar (top-left), wave/score (top-right), cipher drawing (full screen)
 
 ---
 
-## File Locations Reference
+## Things You May Need to Do in Godot
 
-| System | Script | Scene |
-|--------|--------|-------|
-| Game Manager | `scripts/managers/game_manager.gd` | (autoload) |
-| Audio Manager | `scripts/managers/audio_manager.gd` | (autoload) |
-| Scene Manager | `scripts/managers/scene_manager.gd` | (autoload) |
-| Spell Manager | `scripts/spells/spell_manager.gd` | (autoload) |
-| Game HUD | `scripts/ui/game_hud.gd` | `scenes/ui/game_hud.tscn` |
-| Base Enemy | `scripts/enemies/base_enemy.gd` | - |
-| Slime Enemy | (uses base_enemy.gd) | `scenes/enemies/slime.tscn` |
-| Enemy Spawner | `scripts/enemies/enemy_spawner.gd` | `scenes/enemies/enemy_spawner.tscn` |
+### EnemySpawner
+If enemies aren't spawning automatically:
+1. Select `EnemySpawner` in `scenes/game.tscn`
+2. In Inspector, set `Auto Start = true`
 
-**Note:** GameHUD is the consolidated UI that includes:
-- Health/mana bars
-- Wave and score display
-- Cipher stroke drawing (formerly in cipher_hud.gd)
-- Status messages for hand tracking
-- Spell cast feedback
+### AnimationTree (Optional)
+The animation system scripts are in place but the AnimationTree needs to be built in Godot's editor.
+See section **8. AnimationTree Editor Setup Guide** in CONTEXT.md for full instructions.
+Without it, character will use default poses but all gameplay works.
+
+### Audio (Optional)
+No audio files are included yet. Add .wav/.ogg files to `assets/audio/` and register them in `audio_manager.gd`.
 
 ---
 
-## Particle Effects
-
-Particle scenes are in `scenes/particles/`:
-- `air_burst.tscn` - Jump effect
-- `dash_trail.tscn` - Dash movement
-- `ground_slam.tscn` - Smash ground impact
-- `ground_wave.tscn` - Expanding ring
-- `shield_burst.tscn` - Shield activation
-- `shield_sustain.tscn` - Shield loop
-- `projectile_core.tscn` - Lightning/throw center
-- `projectile_trail.tscn` - Projectile trail
-- `slash.tscn` - Swipe effects
-
-These are automatically spawned by SpellManager when casting spells.
+## Autoloads (Already Configured)
+- ✅ **GameManager** — Health, waves, score, game state
+- ✅ **AudioManager** — Sound effects and music
+- ✅ **SceneManager** — Scene transitions
+- ✅ **SpellManager** — Spell effects dispatch
 
 ---
 
 ## Troubleshooting
 
-### HUD not updating
-- Ensure GameManager autoload is enabled
-- Check that GameHUD is instanced in the scene
-
 ### Enemies not chasing
-- Add player to `player` group
-- Check enemy's `detection_range` in Inspector
+- Verify `player_controller.gd` has `add_to_group("player")` in `_ready()`
+- Check enemy `detection_range` in Inspector (default: 10m)
 
-### No sound playing
-- Verify audio files are imported
-- Check `sfx_library` has entries
-- Ensure AudioManager autoload is enabled
+### No particles visible
+- Ensure all particle .tscn files have `draw_pass_1` assigned
+- Check that `SpellManager` autoload is enabled
 
 ### Vision server not connecting
 - Confirm server is running (`py main.py`)
