@@ -5,7 +5,7 @@ UDP_PORT = 5005
 
 # Camera settings
 import os
-WEBCAM_ID = int(os.getenv("WEBCAM_ID", 1))
+WEBCAM_ID = int(os.getenv("WEBCAM_ID", 0))
 DEBUG_MODE = True
 
 # Calibration

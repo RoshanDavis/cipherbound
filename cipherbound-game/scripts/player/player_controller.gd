@@ -30,9 +30,14 @@ var server := UDPServer.new()
 # --- COMPONENT REFERENCES ---
 var camera_rig: CameraRig
 var player_animator: PlayerAnimator
-var cipher_hud: CanvasLayer
-var spell_origin: Marker3D  ## Where spells spawn from
+var cipher_hud: GameHUD  ## Consolidated game HUD (health, mana, cipher drawing)
+var spell_origin: Marker3D  ## Where spells spawn from (hand level)
 var ground_raycast: RayCast3D  ## Detects ground for landing anticipation
+
+# --- SPELL SPAWN POINTS ---
+var feet_origin: Marker3D  ## Ground level at feet
+var ground_target: Marker3D  ## Ground in front of player
+var body_origin: Marker3D  ## Body center for expanding effects
 
 # --- STATE ---
 var move_input := Vector2.ZERO ## Movement input (lean_x, lean_y)
@@ -66,19 +71,53 @@ func _setup_components() -> void:
 		camera_rig.position = Vector3(0, 1.6, 0)
 	
 	# Player animator (AnimationTree with PlayerAnimator script, under PlayerModel)
-	var player_model := get_node_or_null("PlayerModel")
+	var player_model: Node3D = get_node_or_null("PlayerModel")
 	if player_model:
 		player_animator = player_model.get_node_or_null("PlayerAnimator") as PlayerAnimator
 		if not player_animator:
 			push_warning("PlayerController: PlayerAnimator (AnimationTree) not found in PlayerModel")
 	
-	# Spell origin marker
+	# Spell origin marker (hand level) - parent to PlayerModel so it rotates with character
+	var marker_parent: Node3D = player_model if player_model else self
+	
 	spell_origin = get_node_or_null("SpellOrigin") as Marker3D
+	if not spell_origin and marker_parent:
+		spell_origin = marker_parent.get_node_or_null("SpellOrigin") as Marker3D
 	if not spell_origin:
 		spell_origin = Marker3D.new()
 		spell_origin.name = "SpellOrigin"
-		spell_origin.position = Vector3(0, 1.2, 0.5)  # Chest height, slightly forward
-		add_child(spell_origin)
+		spell_origin.position = Vector3(0, 1.2, -0.5)  # Chest height, slightly forward (-Z is forward)
+		marker_parent.add_child(spell_origin)
+	
+	# Feet origin (ground level)
+	feet_origin = get_node_or_null("FeetOrigin") as Marker3D
+	if not feet_origin and marker_parent:
+		feet_origin = marker_parent.get_node_or_null("FeetOrigin") as Marker3D
+	if not feet_origin:
+		feet_origin = Marker3D.new()
+		feet_origin.name = "FeetOrigin"
+		feet_origin.position = Vector3(0, 0.05, 0)  # Just above ground
+		marker_parent.add_child(feet_origin)
+	
+	# Ground target (in front of player)
+	ground_target = get_node_or_null("GroundTarget") as Marker3D
+	if not ground_target and marker_parent:
+		ground_target = marker_parent.get_node_or_null("GroundTarget") as Marker3D
+	if not ground_target:
+		ground_target = Marker3D.new()
+		ground_target.name = "GroundTarget"
+		ground_target.position = Vector3(0, 0.05, -1.5)  # 1.5m in front at ground (-Z is forward)
+		marker_parent.add_child(ground_target)
+	
+	# Body origin (center mass)
+	body_origin = get_node_or_null("BodyOrigin") as Marker3D
+	if not body_origin and marker_parent:
+		body_origin = marker_parent.get_node_or_null("BodyOrigin") as Marker3D
+	if not body_origin:
+		body_origin = Marker3D.new()
+		body_origin.name = "BodyOrigin"
+		body_origin.position = Vector3(0, 1.0, 0)  # Chest height
+		marker_parent.add_child(body_origin)
 	
 	# Ground detection raycast for landing anticipation
 	ground_raycast = RayCast3D.new()
@@ -88,8 +127,9 @@ func _setup_components() -> void:
 	ground_raycast.enabled = true
 	add_child(ground_raycast)
 	
-	# Create HUD for cipher feedback
-	cipher_hud = load("res://scripts/vision/cipher_hud.gd").new()
+	# Create HUD for cipher feedback (using consolidated GameHUD)
+	var hud_scene := preload("res://scenes/ui/game_hud.tscn")
+	cipher_hud = hud_scene.instantiate()
 	add_child(cipher_hud)
 	
 	# Connect animator signals
@@ -99,7 +139,32 @@ func _setup_components() -> void:
 		player_animator.landing_finished.connect(_on_landing_finished)
 		player_animator.spell_effect.connect(_on_spell_effect)
 	
+	# Register spawn points with SpellManager
+	_register_with_spell_manager()
+	
 	print("PlayerController initialized")
+
+func _register_with_spell_manager() -> void:
+	"""Register this player and spawn points with the SpellManager singleton."""
+	if not has_node("/root/SpellManager"):
+		push_warning("PlayerController: SpellManager autoload not found")
+		return
+	
+	var spell_mgr := get_node("/root/SpellManager")
+	if not spell_mgr.has_method("register_player"):
+		return
+	
+	# SpellManager.SpawnLocation enum values
+	# FEET = 0, GROUND_FRONT = 1, BODY_CENTER = 2, HAND = 3
+	var spawn_points := {
+		0: feet_origin,      # FEET
+		1: ground_target,    # GROUND_FRONT
+		2: body_origin,      # BODY_CENTER
+		3: spell_origin      # HAND
+	}
+	
+	spell_mgr.register_player(self, spawn_points)
+	print("PlayerController: Registered with SpellManager")
 
 func _start_network() -> void:
 	"""Start the UDP server for vision data."""
@@ -365,28 +430,12 @@ func _update_stroke_visualization(stroke_points: Array) -> void:
 	if not cipher_hud:
 		return
 	
-	# Ensure trail is visible (reset fade state from previous cipher)
-	cipher_hud.current_alpha = 1.0
-	cipher_hud.fade_timer = 0.0
-	cipher_hud.is_beautifying = false
-	cipher_hud.beautify_progress = 0.0
-	
-	cipher_hud.draw_points.clear()
-	for point in stroke_points:
-		if point is Array and point.size() >= 2:
-			# Convert from centered (-1,1) to normalized (0,1)
-			var x := (float(point[0]) + 1.0) / 2.0
-			var y := (float(point[1]) + 1.0) / 2.0
-			cipher_hud.draw_points.append(Vector2(x, y))
-	
-	if cipher_hud.draw_canvas:
-		cipher_hud.draw_canvas.queue_redraw()
+	# Use the consolidated GameHUD method that handles coordinate conversion
+	cipher_hud.update_stroke_from_vision(stroke_points)
 
 func _clear_stroke_visualization() -> void:
 	"""Clear the cipher stroke from HUD."""
 	if not cipher_hud:
 		return
 	
-	cipher_hud.draw_points.clear()
-	if cipher_hud.draw_canvas:
-		cipher_hud.draw_canvas.queue_redraw()
+	cipher_hud.clear_stroke()

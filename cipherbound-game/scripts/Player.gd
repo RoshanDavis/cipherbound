@@ -32,7 +32,7 @@ var smoothed_input := Vector2.ZERO # Smoothed input
 var move_input := Vector2.ZERO # Movement input (lean_x, lean_y)
 var camera: Camera3D
 var arms: Node3D # Arms controller (optional)
-var cipher_hud: CanvasLayer # HUD for drawing feedback
+var cipher_hud: GameHUD # HUD for drawing feedback (now uses GameHUD)
 var last_recognized_gesture := "" # Last processed gesture to prevent duplicates
 
 # --- GRAVITY ---
@@ -50,8 +50,9 @@ func _ready():
 	if arms:
 		print("Arms controller found")
 	
-	# Create HUD for cipher feedback
-	cipher_hud = load("res://scripts/CipherHUD.gd").new()
+	# Create HUD for cipher feedback (using consolidated GameHUD)
+	var hud_scene := preload("res://scenes/ui/game_hud.tscn")
+	cipher_hud = hud_scene.instantiate()
 	add_child(cipher_hud)
 	
 	# Start UDP server
@@ -223,28 +224,15 @@ func _update_stroke_visualization(stroke_points: Array):
 	if not cipher_hud:
 		return
 	
-	# Convert stroke points from Python format [[x,y], [x,y]...] to Vector2 array
-	# Python uses centered coordinates (-1 to 1), convert to normalized (0 to 1)
-	cipher_hud.draw_points.clear()
-	for point in stroke_points:
-		if point is Array and point.size() >= 2:
-			# Convert from centered (-1,1) to normalized (0,1)
-			var x = (float(point[0]) + 1.0) / 2.0
-			var y = (float(point[1]) + 1.0) / 2.0
-			cipher_hud.draw_points.append(Vector2(x, y))
-	
-	# Trigger redraw
-	if cipher_hud.draw_canvas:
-		cipher_hud.draw_canvas.queue_redraw()
+	# Use the new consolidated method that handles coordinate conversion
+	cipher_hud.update_stroke_from_vision(stroke_points)
 
 func _clear_stroke_visualization():
 	"""Clear the stroke visualization from the HUD."""
 	if not cipher_hud:
 		return
 	
-	cipher_hud.draw_points.clear()
-	if cipher_hud.draw_canvas:
-		cipher_hud.draw_canvas.queue_redraw()
+	cipher_hud.clear_stroke()
 
 func _cast_air_blast_spell():
 	print("💨 A blast of air launches you skyward!")

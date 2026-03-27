@@ -77,10 +77,23 @@ cipherbound-game/scripts/
 │   ├── player_controller.gd  # Main player controller - UDP, movement, spell dispatch
 │   ├── camera_rig.gd         # Third-person SpringArm camera with head tracking
 │   └── player_animator.gd    # AnimationTree driver (BlendSpace2D locomotion, StateMachine states)
-├── vision/                   # Vision/HUD integration
-│   └── cipher_hud.gd         # HUD for stroke visualization & spell feedback
 ├── spells/                   # Spell system
-│   └── spell_manager.gd      # Autoload singleton for spell registration & dispatch
+│   ├── spell_manager.gd      # Autoload singleton for spell registration & dispatch
+│   └── effects/              # GPUParticles3D-based spell VFX
+│       ├── base_effect.gd    # Base class for all effects
+│       ├── foot_effect.gd    # Effects at player feet (jump, dash)
+│       ├── ground_effect.gd  # Effects on ground surface (smash)
+│       ├── body_effect.gd    # Effects expanding from body (shield)
+│       └── hand_effect.gd    # Effects near hands (projectile, slash)
+├── managers/                 # Global manager autoloads
+│   ├── game_manager.gd       # Player stats (health/mana), wave tracking, game state
+│   ├── audio_manager.gd      # SFX pool, music playback, volume control
+│   └── scene_manager.gd      # Scene transitions with fade effects
+├── ui/                       # UI scripts
+│   └── game_hud.gd           # Consolidated HUD - health/mana, cipher drawing, status
+├── enemies/                  # Enemy AI system
+│   ├── base_enemy.gd         # Base class with health, AI states, navigation
+│   └── enemy_spawner.gd      # Wave-based enemy spawning
 └── deprecated/               # Legacy scripts (kept for reference)
     ├── Arms.gd               # Old first-person arm visualization
     ├── CipherDrawer.gd       # Old Godot-side pattern matching
@@ -119,9 +132,16 @@ ROOT (cipherbound/)
 │   │   ├── player/          # Player controller, camera, animator
 │   │   ├── vision/          # HUD and vision integration
 │   │   ├── spells/          # Spell manager and effects
+│   │   │   └── effects/     # GPUParticles3D effect scripts
+│   │   ├── managers/        # Global autoload managers
+│   │   ├── ui/              # UI scripts (HUD, menus)
+│   │   ├── enemies/         # Enemy AI and spawning
 │   │   └── deprecated/      # Legacy scripts (reference only)
 │   ├── scenes/              # .tscn scene files
 │   │   ├── player/          # Player scene
+│   │   ├── particles/       # GPUParticles3D VFX scenes
+│   │   ├── ui/              # UI scene files
+│   │   ├── enemies/         # Enemy prefabs
 │   │   └── game.tscn        # Main game scene
 │   └── assets/              # Models, animations, textures
 │       ├── models/          # Character and environment models
@@ -222,22 +242,420 @@ ROOT (cipherbound/)
 - [x] **Visuals:** Real-time stroke drawing on HUD.
 - [x] **Third-Person Camera:** SpringArm3D camera rig with collision avoidance.
 - [x] **Animation System (Scripts):** PlayerAnimator with stance switching, ability selector, physics-dependent sub-state machines.
-- [x] **Spell System:** SpellManager singleton foundation.
+- [x] **Spell System:** SpellManager singleton with GPUParticles3D visual effects.
+- [x] **Manager Systems:** GameManager, AudioManager, SceneManager autoloads.
+- [x] **UI System:** GameHUD with health/mana bars, wave info, cipher visualization.
+- [x] **Enemy System:** Base enemy class with AI state machine, wave spawning.
 
 ### Next Goals 🎯
 1. **AnimationTree Editor Setup:** Build the tree structure in Godot (see setup guide below).
-2. **Register SpellManager Autoload:** Add to Project Settings → Autoload.
-3. **Add Animations to Libraries:** Import FBX animations into library .res files.
-4. **Add Call Method Tracks:** Keyframe animation events in AnimationPlayer.
-5. **Spell Visual Effects:** Implement particle effects for spells.
-6. **Game Environment:** Create a test dungeon/arena.
+2. **Add Animations to Libraries:** Import FBX animations into library .res files.
+3. **Add Call Method Tracks:** Keyframe animation events in AnimationPlayer.
+4. **Audio Assets:** Add sound effects and music tracks to AudioManager.
+5. **Game Environment:** Create a test dungeon/arena with navigation mesh.
+6. **Polish & Balancing:** Tune enemy stats, wave difficulty, spell costs.
+
+## 9. Spell Effects System
+
+### Overview
+Each cipher triggers a unique visual effect at different spawn locations relative to the player. Effects use a combination of GPUParticles3D, shaders, and mesh-based effects for a **Fantasy Magic** aesthetic (glowing runes, mystical particles, ethereal auras).
+
+### Spell Effect Spawn Locations
+
+| Cipher | Spell | Spawn Location | Effect Type |
+|--------|-------|----------------|-------------|
+| `air_blast` | Jump | **Player's feet** | Air burst particles pushing upward |
+| `arrow_left` | Dash Left | **Player's feet** | Trail particles + wind burst |
+| `arrow_right` | Dash Right | **Player's feet** | Trail particles + wind burst |
+| `water` | Smash Ground | **Ground in front** | Impact wave expanding outward |
+| `shield` | Shield | **Expanding from player** | Dome/sphere mesh growing outward |
+| `lightning` | Throw Forward | **Near hands** | Projectile spawned at hand position |
+| `swipe` | Swipe Horizontal | **Near hands** | Arc slash effect at hand level |
+| `swipe_vertical` | Swipe Up | **Near hands** | Vertical slash effect at hand level |
+
+### Effect Architecture
+
+```text
+cipherbound-game/
+├── scenes/
+│   └── effects/                    # VFX scene files (.tscn)
+│       ├── foot_effects/
+│       │   ├── air_burst.tscn      # Jump wind effect
+│       │   └── dash_trail.tscn     # Dash movement trail
+│       ├── ground_effects/
+│       │   └── ground_slam.tscn    # Smash ground impact
+│       ├── body_effects/
+│       │   └── shield_dome.tscn    # Expanding shield
+│       └── hand_effects/
+│           ├── projectile.tscn     # Lightning/throw projectile
+│           └── slash_arc.tscn      # Swipe effects
+├── scripts/
+│   └── spells/
+│       ├── spell_manager.gd        # Singleton - spell dispatch
+│       └── effects/                # Effect scripts
+│           ├── base_effect.gd      # Base class for all effects
+│           ├── foot_effect.gd      # Effects at player feet
+│           ├── ground_effect.gd    # Effects on ground surface
+│           ├── body_effect.gd      # Effects expanding from body
+│           └── hand_effect.gd      # Effects near hands
+└── assets/
+    └── materials/
+        └── spell_vfx/             # Shader materials for effects
+            ├── magic_particle.tres
+            ├── shield_shader.tres
+            └── slash_trail.tres
+```
+
+### Spawn Point References (Player Scene)
+
+The player scene needs multiple `Marker3D` nodes for effect spawn points:
+
+```text
+Player (CharacterBody3D)
+├── SpellOrigin (Marker3D) - existing, chest height
+├── FeetOrigin (Marker3D)  - ground level, at feet center
+├── GroundTarget (Marker3D) - 1-2m in front of player at ground level
+├── LeftHandOrigin (Marker3D) - bound to left hand bone (optional)
+└── RightHandOrigin (Marker3D) - bound to right hand bone (optional)
+```
+
+### SpellManager Enhancement
+
+The `spell_manager.gd` will be enhanced to:
+1. Preload effect scenes
+2. Determine spawn location based on spell type
+3. Instantiate effects with proper positioning/rotation
+4. Handle effect lifecycle (auto-free after completion)
+
+### Effect Base Class
+
+```gdscript
+# scripts/spells/effects/base_effect.gd
+extends Node3D
+class_name BaseSpellEffect
+
+signal effect_finished
+
+@export var lifetime := 2.0
+@export var auto_free := true
+
+func _ready() -> void:
+    if auto_free:
+        await get_tree().create_timer(lifetime).timeout
+        effect_finished.emit()
+        queue_free()
+
+func play() -> void:
+    # Override in subclasses to trigger particles/animations
+    pass
+```
+
+### Visual Effect Details
+
+**Air Burst (Jump/Dash):**
+- GPUParticles3D with upward/directional velocity
+- Cyan-white color gradient
+- Wind-like streaks + dust particles
+- Brief flash of light
+
+**Ground Slam:**
+- Expanding ring mesh with shader
+- Debris particles outward
+- Screen shake (camera impulse)
+- Ground decal (optional)
+
+**Shield Dome:**
+- Animated mesh sphere scaling from 0 to full size
+- Fresnel shader for ethereal edge glow
+- Hexagonal pattern texture (optional)
+- Particles along surface
+
+**Hand Effects (Projectile/Slash):**
+- Trail renderer for movement
+- Glowing rune particles
+- Color-coded per element (cyan=wind, yellow=lightning)
 
 ### Setup Notes
 To complete the transition to third-person:
 1. Open Godot and go to Project → Project Settings → Autoload.
-2. Add `res://scripts/spells/spell_manager.gd` as `SpellManager` (singleton).
+2. Autoloads are pre-configured in `project.godot`:
+   - `GameManager` - `res://scripts/managers/game_manager.gd`
+   - `AudioManager` - `res://scripts/managers/audio_manager.gd`
+   - `SceneManager` - `res://scripts/managers/scene_manager.gd`
+   - `SpellManager` - `res://scripts/spells/spell_manager.gd`
 3. Follow the **AnimationTree Setup Guide** below to configure the AnimationTree.
 4. Run the game and test with the Python vision server.
+
+## 10. Manager Systems
+
+### GameManager (Autoload Singleton)
+Manages player stats, wave tracking, and game state.
+
+**Signals:**
+- `health_changed(current, maximum)` - Player health updated
+- `mana_changed(current, maximum)` - Player mana updated
+- `wave_started(wave_number, enemy_count)` - Wave begins
+- `wave_completed(wave_number)` - Wave cleared
+- `enemy_killed(enemy, points)` - Enemy defeated
+- `score_changed(new_score)` - Score updated
+- `game_over(victory)` - Game ended
+
+**Properties:**
+```gdscript
+@export var max_health := 100.0
+@export var max_mana := 100.0
+@export var mana_regen_rate := 5.0  # Per second
+var current_health: float
+var current_mana: float
+var current_wave := 0
+var score := 0
+var game_state: GameState  # MENU, PLAYING, PAUSED, GAME_OVER, VICTORY
+```
+
+**Usage:**
+```gdscript
+# Take damage
+GameManager.take_damage(20)
+
+# Use mana for spell
+if GameManager.use_mana(25):
+    # Cast spell
+    pass
+
+# Check game state
+if GameManager.game_state == GameManager.GameState.PLAYING:
+    # Game logic
+    pass
+```
+
+### AudioManager (Autoload Singleton)
+Handles sound effects and music with pooling and volume control.
+
+**Features:**
+- SFX pool (8 AudioStreamPlayer3D instances)
+- 2D SFX support
+- Music player with crossfade
+- Volume control (master, SFX, music)
+- Runtime audio bus creation
+
+**Usage:**
+```gdscript
+# Play 3D sound effect at position
+AudioManager.play_sfx("sword_hit", global_position)
+
+# Play 2D UI sound
+AudioManager.play_sfx_2d("menu_click")
+
+# Play background music
+AudioManager.play_music("battle_theme")
+
+# Adjust volumes (0.0 to 1.0)
+AudioManager.set_master_volume(0.8)
+AudioManager.set_sfx_volume(0.7)
+AudioManager.set_music_volume(0.5)
+```
+
+**Adding Sounds:**
+```gdscript
+# In AudioManager or at runtime
+sfx_library["sword_hit"] = preload("res://assets/audio/sfx/sword_hit.wav")
+music_library["battle_theme"] = preload("res://assets/audio/music/battle.ogg")
+```
+
+### SceneManager (Autoload Singleton)
+Manages scene transitions with fade effects.
+
+**Features:**
+- Fade-to-black transitions
+- Scene dictionary for easy access
+- Signals for transition events
+- Screen flash effect
+
+**Usage:**
+```gdscript
+# Change to a scene
+SceneManager.change_scene("main_menu")
+SceneManager.change_scene("game")
+
+# Reload current scene
+SceneManager.reload_current_scene()
+
+# With custom transition time
+SceneManager.change_scene("game", 0.5)  # 0.5 second fade
+
+# Screen flash (for damage, etc.)
+SceneManager.fade_flash(0.1)
+```
+
+**Configuring Scenes:**
+```gdscript
+# In scene_manager.gd
+const SCENES := {
+    "main_menu": "res://scenes/menus/main_menu.tscn",
+    "game": "res://scenes/game.tscn",
+    "game_over": "res://scenes/menus/game_over.tscn",
+}
+```
+
+## 11. UI System
+
+### GameHUD
+The main in-game HUD displaying player stats, wave information, and cipher visualization.
+
+**Scene:** `scenes/ui/game_hud.tscn`
+**Script:** `scripts/ui/game_hud.gd`
+
+**Components:**
+- **Health Bar:** Top-left, red ProgressBar with label (100/100)
+- **Mana Bar:** Below health, blue ProgressBar with label
+- **Wave Label:** Top-right, current wave number
+- **Score Label:** Below wave, current score
+- **Spell Feedback:** Center screen, shows cast spell names
+- **Cipher Canvas:** Full-screen Control for stroke drawing
+
+**Features:**
+- Automatic connection to GameManager signals
+- Smooth bar animations (lerp-based)
+- Spell feedback with fade-out
+- Cipher stroke visualization (from original CipherHUD)
+
+**Usage:**
+Add the scene to your game:
+```gdscript
+var hud = preload("res://scenes/ui/game_hud.tscn").instantiate()
+add_child(hud)
+
+# Manual updates (if not using GameManager)
+hud.update_health(80, 100)
+hud.update_mana(50, 100)
+
+# Show spell feedback
+hud.show_spell_cast("Lightning Bolt", "⚡")
+
+# Update cipher stroke
+hud.update_stroke([[100, 200], [150, 250], [200, 200]])
+```
+
+## 12. Enemy System
+
+### BaseEnemy
+Base class for all enemies with health, AI states, and combat.
+
+**File:** `scripts/enemies/base_enemy.gd`
+
+**AI States:**
+- `IDLE` - Standing still, scanning for player
+- `PATROL` - Following patrol points
+- `CHASE` - Pursuing the player
+- `ATTACK` - In attack range, dealing damage
+- `HURT` - Briefly stunned after taking damage
+- `DEAD` - Death state, queued for removal
+
+**Exported Properties:**
+```gdscript
+@export var max_health := 30.0
+@export var move_speed := 3.0
+@export var chase_speed := 5.0
+@export var attack_damage := 10.0
+@export var attack_range := 2.0
+@export var detection_range := 10.0
+@export var attack_cooldown := 1.5
+@export var score_value := 100
+@export var knockback_resistance := 0.0
+@export var patrol_points: Array[Vector3] = []
+```
+
+**Signals:**
+- `health_changed(current, maximum)`
+- `died(enemy)`
+- `attacked(target)`
+
+**Creating Custom Enemies:**
+```gdscript
+# Extend BaseEnemy for custom behavior
+extends BaseEnemy
+class_name GoblinEnemy
+
+func _ready() -> void:
+    max_health = 50.0
+    attack_damage = 15.0
+    chase_speed = 6.0
+    super._ready()
+
+func _perform_attack() -> void:
+    # Custom attack logic
+    super._perform_attack()
+```
+
+### Slime Enemy
+Basic enemy prefab extending BaseEnemy.
+
+**Scene:** `scenes/enemies/slime.tscn`
+
+**Stats:**
+- Health: 30
+- Speed: 2.0 (walk) / 4.0 (chase)
+- Damage: 10
+- Attack Range: 1.5m
+- Detection: 10m
+- Score: 100 points
+
+### EnemySpawner
+Wave-based enemy spawning system.
+
+**Scene:** `scenes/enemies/enemy_spawner.tscn`
+**Script:** `scripts/enemies/enemy_spawner.gd`
+
+**Features:**
+- Configurable waves with enemy count and types
+- Spawn point markers (Marker3D children)
+- Spawn around player option
+- Automatic wave progression
+- Integration with GameManager
+
+**Exported Properties:**
+```gdscript
+@export var waves: Array[WaveData] = []
+@export var slime_scene: PackedScene
+@export var spawn_radius := 15.0
+@export var spawn_delay := 0.5
+@export var wave_delay := 3.0
+@export var auto_start := false
+@export var spawn_around_player := false
+```
+
+**Signals:**
+- `wave_started(wave_number, enemy_count)`
+- `wave_completed(wave_number)`
+- `all_waves_completed()`
+- `enemy_spawned(enemy)`
+
+**Usage:**
+```gdscript
+# Get spawner reference
+@onready var spawner: EnemySpawner = $EnemySpawner
+
+# Start wave spawning
+spawner.start_waves()
+
+# Spawn specific wave
+spawner.spawn_wave(2)
+
+# Spawn single enemy at position
+spawner.spawn_enemy_at("slime", Vector3(10, 0, 5))
+
+# Check alive enemies
+var alive := spawner.get_alive_count()
+```
+
+**Default Waves (if none configured):**
+| Wave | Enemies | Type | Interval |
+|------|---------|------|----------|
+| 1 | 3 | slime | 0.5s |
+| 2 | 5 | slime | 0.45s |
+| 3 | 7 | slime | 0.4s |
+| 4 | 9 | slime | 0.35s |
+| 5 | 11 | slime | 0.3s |
 
 ## 8. AnimationTree Editor Setup Guide
 
