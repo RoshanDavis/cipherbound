@@ -1,0 +1,51 @@
+[gd_scene load_steps=9 format=3 uid="uid://shield_sustain_particles"]
+
+[sub_resource type="Curve" id="Curve_alpha"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.3, 0.7), 0.0, 0.0, 0, 0, Vector2(0.7, 0.5), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="CurveTexture" id="CurveTexture_alpha"]
+curve = SubResource("Curve_alpha")
+
+[sub_resource type="Curve" id="Curve_scale"]
+_data = [Vector2(0, 0.1), 0.0, 0.0, 0, 0, Vector2(0.4, 0.8), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_scale"]
+curve = SubResource("Curve_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_sustain"]
+emission_shape = 1
+emission_sphere_radius = 1.5
+direction = Vector3(0, 1, 0)
+spread = 40.0
+initial_velocity_min = 1.0
+initial_velocity_max = 3.0
+gravity = Vector3(0, 0.5, 0)
+scale_min = 0.2
+scale_max = 0.5
+scale_curve = SubResource("CurveTexture_scale")
+color = Color(0.4, 0.8, 1, 1)
+alpha_curve = SubResource("CurveTexture_alpha")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sustain"]
+transparency = 1
+blend_mode = 1
+billboard_mode = 3
+vertex_color_use_as_albedo = true
+emission_enabled = true
+emission = Color(0.3, 0.7, 1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="SphereMesh" id="SphereMesh_sustain"]
+material = SubResource("StandardMaterial3D_sustain")
+radial_segments = 8
+rings = 4
+
+[node name="ShieldSustainParticles" type="GPUParticles3D"]
+emitting = false
+amount = 20
+lifetime = 1.5
+one_shot = false
+process_material = SubResource("ParticleProcessMaterial_sustain")
+draw_pass_1 = SubResource("SphereMesh_sustain")

@@ -1,0 +1,54 @@
+[gd_scene load_steps=8 format=3 uid="uid://typ01ut7vam7"]
+
+[sub_resource type="Curve" id="Curve_rf4ou"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.682886, 0.88498574), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_1dmjb"]
+curve = SubResource("Curve_rf4ou")
+
+[sub_resource type="Curve" id="Curve_bx5mg"]
+_data = [Vector2(0, 0.14077544), 0.0, 0.0, 0, 0, Vector2(0.23657721, 1), 0.0, 0.0, 0, 0, Vector2(0.8741611, 0.986469), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="CurveTexture" id="CurveTexture_rf4ou"]
+curve = SubResource("Curve_bx5mg")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_bx5mg"]
+emission_shape = 1
+emission_sphere_radius = 1.0
+spread = 180.0
+initial_velocity_min = 10.0
+initial_velocity_max = 20.0
+gravity = Vector3(0, -5, 0)
+scale_min = 0.5
+scale_max = 1.5
+scale_curve = SubResource("CurveTexture_rf4ou")
+color = Color(6.256998e-07, 0.4222958, 0.42280164, 1)
+alpha_curve = SubResource("CurveTexture_1dmjb")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bx5mg"]
+transparency = 1
+blend_mode = 1
+vertex_color_use_as_albedo = true
+emission_enabled = true
+emission = Color(0.25, 1, 1, 1)
+emission_energy_multiplier = 2.5
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="SphereMesh" id="SphereMesh_bx5mg"]
+material = SubResource("StandardMaterial3D_bx5mg")
+radial_segments = 8
+rings = 4
+
+[node name="ShieldBurstParticles" type="GPUParticles3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3621216, 0)
+emitting = false
+amount = 30
+one_shot = true
+explosiveness = 1.0
+process_material = SubResource("ParticleProcessMaterial_bx5mg")
+draw_pass_1 = SubResource("SphereMesh_bx5mg")

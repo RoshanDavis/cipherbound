@@ -1,21 +1,9 @@
-[gd_scene load_steps=15 format=3 uid="uid://2oyxswthq44v"]
+[gd_scene load_steps=12 format=3 uid="uid://puida31u7dw"]
 
-[ext_resource type="Script" uid="uid://djcbj1xrfwcm2" path="res://scripts/Player.gd" id="2_player"]
-[ext_resource type="Script" uid="uid://c4jdn7c6gabwm" path="res://scripts/Arms.gd" id="3_arms"]
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_forearm"]
-radius = 0.03
-height = 0.25
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
-albedo_color = Color(0.8, 0.6, 0.5, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_hand"]
-size = Vector3(0.08, 0.03, 0.1)
-
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
-radius = 0.4
-height = 1.8
+[ext_resource type="PackedScene" uid="uid://bbgalb8adrapu" path="res://scenes/player/player.tscn" id="1_uwrxv"]
+[ext_resource type="PackedScene" uid="uid://cmlax5hud3qf1" path="res://scenes/ui/game_hud.tscn" id="2_yqjtg"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_spawner.tscn" id="3_lnu2h"]
+[ext_resource type="PackedScene" uid="uid://bbtgrre81gan4" path="res://scenes/enemies/slime.tscn" id="4_lbhrr"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yqjtg"]
 albedo_color = Color(0.14020047, 0.62812984, 0.05336009, 1)
@@ -29,106 +17,53 @@ albedo_color = Color(0.5, 0.45, 0.4, 1)
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uwrxv"]
 albedo_color = Color(0.8666667, 0.3647059, 0.34509805, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
-albedo_color = Color(0.9, 0.2, 0.1, 1)
-emission_enabled = true
-emission = Color(0.5, 0.1, 0.05, 1)
-emission_energy_multiplier = 0.5
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_lbhrr"]
+sky_top_color = Color(0.31890604, 0.44921774, 0.6772622, 1)
+sky_horizon_color = Color(0.763496, 0.6268707, 0.49161887, 1)
+ground_bottom_color = Color(0.12402096, 0.12923324, 0.39622056, 1)
+ground_horizon_color = Color(0, 0.25366193, 0.37385938, 1)
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
-sky_top_color = Color(0.1, 0.15, 0.3, 1)
-sky_horizon_color = Color(0.3, 0.25, 0.4, 1)
-ground_bottom_color = Color(0.1, 0.1, 0.15, 1)
-ground_horizon_color = Color(0.2, 0.2, 0.25, 1)
+[sub_resource type="Sky" id="Sky_iywne"]
+sky_material = SubResource("ProceduralSkyMaterial_lbhrr")
 
-[sub_resource type="Sky" id="Sky_main"]
-sky_material = SubResource("ProceduralSkyMaterial_sky")
-
-[sub_resource type="Environment" id="Environment_main"]
+[sub_resource type="Environment" id="Environment_lbhrr"]
 background_mode = 2
-sky = SubResource("Sky_main")
-ambient_light_source = 2
-ambient_light_color = Color(0.3, 0.3, 0.4, 1)
-ambient_light_energy = 0.5
-tonemap_mode = 2
-glow_enabled = true
-glow_intensity = 0.5
-fog_enabled = true
-fog_light_color = Color(0.25, 0.25, 0.35, 1)
-fog_density = 0.005
+sky = SubResource("Sky_iywne")
 
 [node name="Game" type="Node3D"]
 
-[node name="Player" type="CharacterBody3D" parent="."]
-script = ExtResource("2_player")
-sensitivity_x = 3.0
-sensitivity_y = 1.6
-pitch_min = -1.02
-pitch_max = 1.0
+[node name="Effects" type="Node3D" parent="."]
 
-[node name="Camera3D" type="Camera3D" parent="Player"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-
-[node name="Arms" type="Node3D" parent="Player/Camera3D"]
-script = ExtResource("3_arms")
-
-[node name="LeftArm" type="Node3D" parent="Player/Camera3D/Arms"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, -0.2, -0.4)
-
-[node name="Forearm" type="MeshInstance3D" parent="Player/Camera3D/Arms/LeftArm"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.1)
-mesh = SubResource("CapsuleMesh_forearm")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="Hand" type="MeshInstance3D" parent="Player/Camera3D/Arms/LeftArm"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
-mesh = SubResource("BoxMesh_hand")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="RightArm" type="Node3D" parent="Player/Camera3D/Arms"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, -0.2, -0.4)
-
-[node name="Forearm" type="MeshInstance3D" parent="Player/Camera3D/Arms/RightArm"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.1)
-mesh = SubResource("CapsuleMesh_forearm")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="Hand" type="MeshInstance3D" parent="Player/Camera3D/Arms/RightArm"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
-mesh = SubResource("BoxMesh_hand")
-surface_material_override/0 = SubResource("StandardMaterial3D_skin")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
-shape = SubResource("CapsuleShape3D_player")
+[node name="Player" parent="." instance=ExtResource("1_uwrxv")]
 
 [node name="Environment" type="Node3D" parent="."]
 
 [node name="Floor" type="CSGBox3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+transform = Transform3D(3.153012, 0, 0, 0, 1, 0, 0, 0, 3.9938111, 0, -1.5, 0)
 use_collision = true
 size = Vector3(30, 1, 30)
 material = SubResource("StandardMaterial3D_yqjtg")
 
 [node name="WallNorth" type="CSGBox3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -15)
+transform = Transform3D(3.5607076, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -58.6708)
 use_collision = true
 size = Vector3(30, 5, 0.5)
 material = SubResource("StandardMaterial3D_wall")
 
 [node name="WallSouth" type="CSGBox3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 15)
+transform = Transform3D(3.8144255, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 60.275997)
 use_collision = true
 size = Vector3(30, 5, 0.5)
 material = SubResource("StandardMaterial3D_wall")
 
 [node name="WallEast" type="CSGBox3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 4.100308, 47.67991, 1, 0)
 use_collision = true
 size = Vector3(0.5, 5, 30)
 material = SubResource("StandardMaterial3D_wall")
 
 [node name="WallWest" type="CSGBox3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 4.121394, -46.76386, 1, 0)
 use_collision = true
 size = Vector3(0.5, 5, 30)
 material = SubResource("StandardMaterial3D_wall")
@@ -168,20 +103,6 @@ use_collision = true
 size = Vector3(1.5, 1.5, 1.5)
 material = SubResource("StandardMaterial3D_uwrxv")
 
-[node name="Targets" type="Node3D" parent="."]
-
-[node name="Target1" type="CSGSphere3D" parent="Targets"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -12)
-material = SubResource("StandardMaterial3D_target")
-
-[node name="Target2" type="CSGSphere3D" parent="Targets"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.5, -10)
-material = SubResource("StandardMaterial3D_target")
-
-[node name="Target3" type="CSGSphere3D" parent="Targets"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 2, -10)
-material = SubResource("StandardMaterial3D_target")
-
 [node name="Lighting" type="Node3D" parent="."]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="Lighting"]
@@ -189,4 +110,9 @@ transform = Transform3D(0.5278299, -0.83026636, 0.17903571, 0.5877908, 0.5092360
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Lighting"]
-environment = SubResource("Environment_main")
+environment = SubResource("Environment_lbhrr")
+
+[node name="GameHUD" parent="." instance=ExtResource("2_yqjtg")]
+
+[node name="EnemySpawner" parent="." instance=ExtResource("3_lnu2h")]
+slime_scene = ExtResource("4_lbhrr")

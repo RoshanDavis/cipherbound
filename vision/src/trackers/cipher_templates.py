@@ -12,10 +12,10 @@
 
 CIPHER_TEMPLATES = {
     # ============================================================
-    # FIRE: ^ (chevron pointing UP)
+    # AIR_BLAST: ^ (chevron pointing UP)
     # The apex is at the TOP, endpoints at the BOTTOM
     # ============================================================
-    "fire": [
+    "air_blast": [
         # Drawn left-to-right (start bottom-left, apex top-center, end bottom-right)
         [
             (0, 100), (12, 75), (25, 50), (37, 25), (50, 0),
@@ -124,7 +124,7 @@ CIPHER_TEMPLATES = {
     
     # ============================================================
     # ARROW_RIGHT: > (chevron pointing RIGHT)
-    # Distinct from fire (^) and water (v) due to horizontal orientation
+    # Distinct from air_blast (^) and water (v) due to horizontal orientation
     # ============================================================
     "arrow_right": [
         # Drawn top to bottom (start top-left, tip right, end bottom-left)

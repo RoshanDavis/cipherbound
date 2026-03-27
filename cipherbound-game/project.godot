@@ -11,6 +11,25 @@ config_version=5
 [application]
 
 config/name="cipherbound-game"
-run/main_scene="uid://bdc3ifl2iu2b8"
+run/main_scene="uid://puida31u7dw"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+GameManager="*res://scripts/managers/game_manager.gd"
+AudioManager="*res://scripts/managers/audio_manager.gd"
+SceneManager="*res://scripts/managers/scene_manager.gd"
+SpellManager="*res://scripts/spells/spell_manager.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+
+[filesystem]
+
+import/blender/enabled=false
+
+[global_group]
+
+player=""
