@@ -191,14 +191,15 @@ enum Ability { JUMP = 0, SMASH_GROUND = 1, DASH_LEFT = 2, DASH_RIGHT = 3,
 
 @export_group("Gesture to Ability Mapping")
 @export var gesture_ability_map: Dictionary = {
-	"air_blast": Ability.JUMP,
-	"water": Ability.SMASH_GROUND,
-	"arrow_left": Ability.DASH_LEFT,
-	"arrow_right": Ability.DASH_RIGHT,
-	"lightning": Ability.THROW_FORWARD,
-	"shield": Ability.SHIELD,
-	"swipe": Ability.SWIPE_HORIZONTAL,
-	"swipe_vertical": Ability.SWIPE_UP
+	"air_jump": Ability.JUMP,
+	"ground_smash": Ability.SMASH_GROUND,
+	"dash_left": Ability.DASH_LEFT,
+	"dash_right": Ability.DASH_RIGHT,
+	"fireball": Ability.THROW_FORWARD,
+	"aoe_attack_sq": Ability.SHIELD,
+	"aoe_attack": Ability.SHIELD,
+	"horizontal_strike": Ability.SWIPE_HORIZONTAL,
+	"vertical_strike": Ability.SWIPE_UP
 }
 
 # --- PARAMETER PATHS ---

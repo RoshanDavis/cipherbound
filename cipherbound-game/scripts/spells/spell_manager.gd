@@ -23,42 +23,42 @@ enum FootEffect { AIR_BURST, DASH }
 # --- SPELL REGISTRY ---
 ## Maps cipher names to spell configurations
 var spell_registry: Dictionary = {
-	"air_blast": {
-		"name": "Air Blast Jump",
+	"air_jump": {
+		"name": "Air Jump",
 		"emoji": "💨",
-		"description": "A blast of air launches you skyward!",
+		"description": "Jump into the air with a wind burst!",
 		"spawn_location": SpawnLocation.FEET,
 		"effect_type": FootEffect.AIR_BURST
 	},
-	"water": {
+	"ground_smash": {
 		"name": "Ground Smash", 
-		"emoji": "💧",
+		"emoji": "💥",
 		"description": "Smash the ground with force!",
 		"spawn_location": SpawnLocation.GROUND_FRONT,
 		"effect_type": null
 	},
-	"shield": {
-		"name": "Shield",
+	"aoe_attack_sq": {
+		"name": "AOE Attack",
 		"emoji": "🛡️",
-		"description": "A magical barrier surrounds you!",
+		"description": "Area of effect blast!",
 		"spawn_location": SpawnLocation.BODY_CENTER,
 		"effect_type": null
 	},
-	"lightning": {
-		"name": "Lightning Bolt",
-		"emoji": "⚡",
-		"description": "A bolt of lightning shoots forward!",
+	"aoe_attack": {
+		"name": "AOE Attack",
+		"emoji": "🛡️",
+		"description": "Area of effect blast!",
+		"spawn_location": SpawnLocation.BODY_CENTER,
+		"effect_type": null
+	},
+	"fireball": {
+		"name": "Fireball",
+		"emoji": "🔥",
+		"description": "A fireball shoots forward!",
 		"spawn_location": SpawnLocation.HAND,
 		"effect_type": HandEffect.PROJECTILE
 	},
-	"circle": {
-		"name": "Shield",
-		"emoji": "🛡️",
-		"description": "A magical barrier surrounds you!",
-		"spawn_location": SpawnLocation.BODY_CENTER,
-		"effect_type": null
-	},
-	"arrow_right": {
+	"dash_right": {
 		"name": "Dash Right",
 		"emoji": "➡️",
 		"description": "Lateral dash to the right!",
@@ -66,7 +66,7 @@ var spell_registry: Dictionary = {
 		"spawn_location": SpawnLocation.FEET,
 		"effect_type": FootEffect.DASH
 	},
-	"arrow_left": {
+	"dash_left": {
 		"name": "Dash Left",
 		"emoji": "⬅️",
 		"description": "Lateral dash to the left!",
@@ -74,15 +74,15 @@ var spell_registry: Dictionary = {
 		"spawn_location": SpawnLocation.FEET,
 		"effect_type": FootEffect.DASH
 	},
-	"swipe": {
-		"name": "Swipe Horizontal",
+	"horizontal_strike": {
+		"name": "Horizontal Strike",
 		"emoji": "💨",
 		"description": "Horizontal slash!",
 		"spawn_location": SpawnLocation.HAND,
 		"effect_type": HandEffect.SLASH
 	},
-	"swipe_vertical": {
-		"name": "Swipe Up",
+	"vertical_strike": {
+		"name": "Vertical Strike",
 		"emoji": "⬆️",
 		"description": "Upward strike!",
 		"spawn_location": SpawnLocation.HAND,

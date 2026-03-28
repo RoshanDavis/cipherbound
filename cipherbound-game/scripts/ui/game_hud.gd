@@ -10,6 +10,7 @@ class_name GameHUD
 @onready var spell_feedback: Label = $CenterContainer/SpellFeedback
 @onready var cipher_canvas: Control = $CipherCanvas
 @onready var status_label: Label = $StatusLabel
+@onready var _cipher_ref_panel: PanelContainer = $CipherReference
 
 # --- CONFIGURATION ---
 @export_group("Bar Settings")
@@ -524,6 +525,13 @@ func update_tracking_status(has_hands: bool, is_drawing: bool) -> void:
 	else:
 		_set_status("Open left hand, then point with right to draw", Color.WHITE)
 
+func set_drawing_mode(is_active: bool) -> void:
+	"""Show or hide the cipher reference panel depending on the stance."""
+	if is_active:
+		_show_cipher_reference()
+	else:
+		_hide_cipher_reference()
+
 func update_stroke_from_vision(stroke_points: Array) -> void:
 	"""Update stroke visualization from Python vision data (centered coords)."""
 	draw_points.clear()
@@ -544,6 +552,19 @@ func clear_stroke() -> void:
 	draw_points.clear()
 	if cipher_canvas:
 		cipher_canvas.queue_redraw()
+
+# ============================================================================
+# CIPHER REFERENCE PANEL (shown during drawing mode)
+# ============================================================================
+
+func _show_cipher_reference() -> void:
+	if _cipher_ref_panel:
+		_cipher_ref_panel.visible = true
+		_cipher_ref_panel.modulate.a = 1.0
+
+func _hide_cipher_reference() -> void:
+	if _cipher_ref_panel:
+		_cipher_ref_panel.visible = false
 
 # --- INTERNAL HELPERS ---
 func _set_status(text: String, color: Color) -> void:

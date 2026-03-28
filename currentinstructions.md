@@ -30,14 +30,14 @@ Press F5 or the Play button. The **Main Menu** will appear. Click **Start Game**
 
 | Cipher | Spell | Effect | Damage |
 |--------|-------|--------|--------|
-| Air Blast | Jump | AOE at feet | 15 |
-| Arrow Right | Dash Right | AOE at feet | 10 |
-| Arrow Left | Dash Left | AOE at feet | 10 |
-| Water | Ground Smash | AOE in front | 25 |
-| Shield / Circle | Shield | Continuous AOE | 5/tick |
-| Lightning | Projectile | Forward-moving | 20 |
-| Swipe | Horizontal Slash | AOE in front | 12 |
-| Swipe Vertical | Vertical Strike | AOE in front | 12 |
+| Air Jump | ^ (Up Arrow) | AOE at feet | Jump & 15 dmg |
+| Dash Right | > (Right Arrow) | AOE at feet | Dash & 10 dmg |
+| Dash Left | < (Left Arrow) | AOE at feet | Dash & 10 dmg |
+| Ground Smash | v (Down Arrow) | AOE in front | 25 |
+| AOE Attack | ○ or □ (Circle/Square) | Continuous AOE | 5/tick |
+| Fireball | Z (Zigzag Bolt) | Forward-moving | 20 |
+| Horizontal Strike | ― (Horizontal line) | AOE in front | 12 |
+| Vertical Strike | \| (Vertical line) | AOE in front | 12 |
 
 ---
 

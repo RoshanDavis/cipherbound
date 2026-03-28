@@ -101,3 +101,121 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="CipherReference" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 44.0
+offset_top = -180.0
+offset_right = 314.0
+offset_bottom = 70.0
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CipherReference"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CipherReference/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "⟡ CIPHERS ⟡"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CipherReference/VBoxContainer"]
+layout_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="CipherReference/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 3
+columns = 2
+
+[node name="Label1" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "^  Up arrow"
+
+[node name="Label2" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "💨  Air Jump"
+
+[node name="Label3" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "<  Left arrow"
+
+[node name="Label4" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "⬅️  Dash Left"
+
+[node name="Label5" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = ">  Right arrow"
+
+[node name="Label6" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "➡️  Dash Right"
+
+[node name="Label7" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "v  Down arrow"
+
+[node name="Label8" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "💥  Ground Smash"
+
+[node name="Label9" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "|  Vertical line"
+
+[node name="Label10" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "⬆️  Vertical Strike"
+
+[node name="Label11" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "―  Horizontal line"
+
+[node name="Label12" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "💨  Horizontal Strike"
+
+[node name="Label13" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "○  Circle / Sq."
+
+[node name="Label14" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "🛡️  AOE Attack"
+
+[node name="Label15" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "Z  Zigzag"
+
+[node name="Label16" type="Label" parent="CipherReference/VBoxContainer/GridContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "🔥  Fireball"

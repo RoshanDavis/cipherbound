@@ -15,7 +15,7 @@ CIPHER_TEMPLATES = {
     # AIR_BLAST: ^ (chevron pointing UP)
     # The apex is at the TOP, endpoints at the BOTTOM
     # ============================================================
-    "air_blast": [
+    "air_jump": [
         # Drawn left-to-right (start bottom-left, apex top-center, end bottom-right)
         [
             (0, 100), (12, 75), (25, 50), (37, 25), (50, 0),
@@ -32,7 +32,7 @@ CIPHER_TEMPLATES = {
     # WATER: v (chevron pointing DOWN)
     # The apex is at the BOTTOM, endpoints at the TOP
     # ============================================================
-    "water": [
+    "ground_smash": [
         # Drawn left-to-right (start top-left, apex bottom-center, end top-right)
         [
             (0, 0), (12, 25), (25, 50), (37, 75), (50, 100),
@@ -50,7 +50,7 @@ CIPHER_TEMPLATES = {
     # Four sides forming a closed shape
     # Multiple start points and directions for robust matching
     # ============================================================
-    "shield": [
+    "aoe_attack_sq": [
         # Clockwise from top-left (most common)
         [
             (0, 0), (25, 0), (50, 0), (75, 0), (100, 0),
@@ -113,7 +113,7 @@ CIPHER_TEMPLATES = {
     # LIGHTNING: Z (zigzag pattern)
     # Horizontal, then diagonal, then horizontal
     # ============================================================
-    "lightning": [
+    "fireball": [
         # Standard Z: right, down-left diagonal, right
         [
             (0, 0), (25, 0), (50, 0), (75, 0), (100, 0),
@@ -126,7 +126,7 @@ CIPHER_TEMPLATES = {
     # ARROW_RIGHT: > (chevron pointing RIGHT)
     # Distinct from air_blast (^) and water (v) due to horizontal orientation
     # ============================================================
-    "arrow_right": [
+    "dash_right": [
         # Drawn top to bottom (start top-left, tip right, end bottom-left)
         [
             (0, 0), (20, 12), (40, 25), (60, 37), (80, 50),
@@ -143,7 +143,7 @@ CIPHER_TEMPLATES = {
     # ARROW_LEFT: < (chevron pointing LEFT)
     # Mirror of arrow_right
     # ============================================================
-    "arrow_left": [
+    "dash_left": [
         # Drawn top to bottom
         [
             (100, 0), (80, 12), (60, 25), (40, 37), (20, 50),
@@ -162,7 +162,7 @@ CIPHER_TEMPLATES = {
     # HORIZONTAL_LINE: - (simple horizontal swipe)
     # Quick cast, easy to draw
     # ============================================================
-    "swipe": [
+    "horizontal_strike": [
         # Left to right
         [
             (0, 50), (15, 50), (30, 50), (45, 50), (60, 50),
@@ -180,7 +180,7 @@ CIPHER_TEMPLATES = {
     # VERTICAL_LINE: | (simple vertical swipe)
     # Quick cast, distinct from horizontal swipe
     # ============================================================
-    "swipe_vertical": [
+    "vertical_strike": [
         # Top to bottom
         [
             (50, 0), (50, 15), (50, 30), (50, 45), (50, 60),
@@ -197,7 +197,7 @@ CIPHER_TEMPLATES = {
     # CIRCLE: O (circular motion)
     # Distinct from rectangle due to curved path
     # ============================================================
-    "circle": [
+    "aoe_attack": [
         # Clockwise from top
         [
             (50, 0), (70, 5), (85, 15), (95, 30), (100, 50),

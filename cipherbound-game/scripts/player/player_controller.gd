@@ -43,6 +43,7 @@ var body_origin: Marker3D  ## Body center for expanding effects
 var move_input := Vector2.ZERO ## Movement input (lean_x, lean_y)
 var look_input := Vector2.ZERO ## Look input for idle turning
 var last_recognized_gesture := "" ## Prevent duplicate spell casts
+var was_casting_mode := false ## Track previous casting stance to trigger UI transitions
 var is_in_physics_ability := false ## Currently in a physics-dependent ability (jump/dash)
 var was_on_floor := true ## Track floor state for landing detection
 var ability_has_launched := false ## True once ability velocity is applied
@@ -242,6 +243,11 @@ func _process_gesture_data(data: Dictionary) -> void:
 	
 	# Update HUD and stance
 	var is_casting_mode := gesture_state in ["ready_to_draw", "drawing"]
+	if is_casting_mode != was_casting_mode:
+		was_casting_mode = is_casting_mode
+		if cipher_hud:
+			cipher_hud.set_drawing_mode(is_casting_mode)
+	
 	if player_animator:
 		player_animator.set_stance(is_casting_mode)
 	
