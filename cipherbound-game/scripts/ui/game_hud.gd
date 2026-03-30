@@ -206,19 +206,17 @@ func _create_main_menu() -> void:
 	_main_menu_panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	_main_menu_panel.visible = false
 	
-	# Dark overlay
+	# Dark, refined aesthetic overlay (semi-transparent to see the world)
 	var overlay_style := StyleBoxFlat.new()
-	overlay_style.bg_color = Color(0, 0, 0, 0.75)
+	overlay_style.bg_color = Color(0.02, 0.05, 0.1, 0.4)
 	_main_menu_panel.add_theme_stylebox_override("panel", overlay_style)
 	
-	# Center container
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_main_menu_panel.add_child(center)
 	
-	# Content
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 30)
+	vbox.add_theme_constant_override("separation", 25)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.add_child(vbox)
 	
@@ -226,40 +224,105 @@ func _create_main_menu() -> void:
 	var title := Label.new()
 	title.text = "CIPHERBOUND"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 64)
-	title.add_theme_color_override("font_color", Color(0.3, 0.9, 1))
+	title.add_theme_font_size_override("font_size", 80)
+	title.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
+	title.add_theme_color_override("font_outline_color", Color(0.2, 0.8, 1.0, 0.5))
+	title.add_theme_constant_override("outline_size", 12)
+	title.add_theme_color_override("font_shadow_color", Color(0.0, 0.5, 1.0, 0.8))
+	title.add_theme_constant_override("shadow_outline_size", 8)
+	title.add_theme_constant_override("shadow_offset_x", 0)
+	title.add_theme_constant_override("shadow_offset_y", 4)
 	vbox.add_child(title)
 	
 	# Subtitle
 	var subtitle := Label.new()
 	subtitle.text = "Cast spells with gestures"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 20)
-	subtitle.add_theme_color_override("font_color", Color(0.7, 0.7, 0.8))
+	subtitle.add_theme_font_size_override("font_size", 22)
+	subtitle.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0, 0.9))
+	subtitle.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	subtitle.add_theme_constant_override("shadow_offset_y", 2)
 	vbox.add_child(subtitle)
 	
-	# Spacer
 	var spacer := Control.new()
-	spacer.custom_minimum_size.y = 20
+	spacer.custom_minimum_size.y = 40
 	vbox.add_child(spacer)
 	
-	# Start button
+	# Start button with glowing neon aesthetic
 	var start_btn := Button.new()
-	start_btn.text = "START GAME"
-	start_btn.custom_minimum_size = Vector2(250, 60)
-	start_btn.add_theme_font_size_override("font_size", 24)
+	start_btn.text = "PLAY"
+	start_btn.custom_minimum_size = Vector2(280, 65)
+	start_btn.add_theme_font_size_override("font_size", 26)
+	start_btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	start_btn.add_theme_color_override("font_hover_color", Color(0.8, 1.0, 0.9))
+	start_btn.add_theme_color_override("font_focus_color", Color(1.0, 1.0, 1.0))
+	
+	# Normal style
+	var btn_normal := StyleBoxFlat.new()
+	btn_normal.bg_color = Color(0.1, 0.2, 0.3, 0.7)
+	btn_normal.border_width_left = 2
+	btn_normal.border_width_right = 2
+	btn_normal.border_width_top = 2
+	btn_normal.border_width_bottom = 2
+	btn_normal.border_color = Color(0.3, 0.8, 1.0, 0.8)
+	btn_normal.corner_radius_top_left = 12
+	btn_normal.corner_radius_top_right = 12
+	btn_normal.corner_radius_bottom_left = 12
+	btn_normal.corner_radius_bottom_right = 12
+	btn_normal.shadow_color = Color(0.2, 0.8, 1.0, 0.3)
+	btn_normal.shadow_size = 10
+	start_btn.add_theme_stylebox_override("normal", btn_normal)
+	
+	# Hover style
+	var btn_hover := btn_normal.duplicate()
+	btn_hover.bg_color = Color(0.2, 0.4, 0.6, 0.8)
+	btn_hover.border_color = Color(0.6, 1.0, 0.9, 1.0)
+	btn_hover.shadow_color = Color(0.3, 0.9, 1.0, 0.6)
+	btn_hover.shadow_size = 20
+	start_btn.add_theme_stylebox_override("hover", btn_hover)
+	
+	# Pressed style
+	var btn_pressed := btn_hover.duplicate()
+	btn_pressed.bg_color = Color(0.4, 0.8, 1.0, 0.9)
+	btn_pressed.border_color = Color(1.0, 1.0, 1.0, 1.0)
+	btn_pressed.shadow_size = 5
+	start_btn.add_theme_stylebox_override("pressed", btn_pressed)
+	
+	start_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	start_btn.pressed.connect(_on_start_pressed)
 	vbox.add_child(start_btn)
 	
+	var spacer_bottom := Control.new()
+	spacer_bottom.custom_minimum_size.y = 15
+	vbox.add_child(spacer_bottom)
+	
+	# Instructions
+	var instructions := Label.new()
+	instructions.text = ""
+	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	instructions.add_theme_font_size_override("font_size", 16)
+	instructions.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7, 0.8))
+	vbox.add_child(instructions)
+	
 	add_child(_main_menu_panel)
+
+	# Pulse animation for title
+	var tween := create_tween().set_loops()
+	tween.tween_property(title, "modulate", Color(1.1, 1.1, 1.2, 1.0), 1.5).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(title, "modulate", Color(0.9, 0.9, 1.0, 1.0), 1.5).set_trans(Tween.TRANS_SINE)
 
 func _show_main_menu() -> void:
 	if _main_menu_panel:
 		_main_menu_panel.visible = true
+		_main_menu_panel.modulate.a = 0.0
+		var fade := create_tween()
+		fade.tween_property(_main_menu_panel, "modulate:a", 1.0, 0.5).set_trans(Tween.TRANS_SINE)
 
 func _hide_main_menu() -> void:
 	if _main_menu_panel:
-		_main_menu_panel.visible = false
+		var fade := create_tween()
+		fade.tween_property(_main_menu_panel, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
+		fade.tween_callback(func(): _main_menu_panel.visible = false)
 
 func _on_start_pressed() -> void:
 	if has_node("/root/GameManager"):

@@ -15,7 +15,7 @@ const HandSpellEffectScript := preload("res://scripts/spells/effects/hand_effect
 enum SpawnLocation { FEET, GROUND_FRONT, BODY_CENTER, HAND }
 
 ## Effect types for hand effects
-enum HandEffect { PROJECTILE, SLASH }
+enum HandEffect { PROJECTILE, HORIZONTAL_SLASH, VERTICAL_SLASH }
 
 ## Effect types for foot effects
 enum FootEffect { AIR_BURST, DASH }
@@ -79,14 +79,14 @@ var spell_registry: Dictionary = {
 		"emoji": "💨",
 		"description": "Horizontal slash!",
 		"spawn_location": SpawnLocation.HAND,
-		"effect_type": HandEffect.SLASH
+		"effect_type": HandEffect.HORIZONTAL_SLASH
 	},
 	"vertical_strike": {
 		"name": "Vertical Strike",
 		"emoji": "⬆️",
 		"description": "Upward strike!",
 		"spawn_location": SpawnLocation.HAND,
-		"effect_type": HandEffect.SLASH
+		"effect_type": HandEffect.VERTICAL_SLASH
 	}
 }
 

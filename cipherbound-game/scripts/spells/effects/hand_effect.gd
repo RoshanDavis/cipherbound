@@ -6,9 +6,10 @@ class_name HandSpellEffect
 
 const PARTICLES_CORE := preload("res://scenes/particles/projectile_core_particles.tscn")
 const PARTICLES_TRAIL := preload("res://scenes/particles/projectile_trail_particles.tscn")
-const PARTICLES_SLASH := preload("res://scenes/particles/slash_particles.tscn")
+const PARTICLES_SLASH_HORIZ := preload("res://scenes/particles/horizontal_strike_particles.tscn")
+const PARTICLES_SLASH_VERT := preload("res://scenes/particles/vertical_strike_particles.tscn")
 
-enum HandEffectType { PROJECTILE, SLASH }
+enum HandEffectType { PROJECTILE, HORIZONTAL_SLASH, VERTICAL_SLASH }
 
 @export var effect_type := HandEffectType.PROJECTILE
 @export var projectile_speed := 18.0
@@ -26,13 +27,20 @@ func _ready() -> void:
 			_is_projectile = true
 			add_particle_scene(PARTICLES_CORE)
 			add_particle_scene(PARTICLES_TRAIL)
-		HandEffectType.SLASH:
+		HandEffectType.HORIZONTAL_SLASH:
 			lifetime = 0.8
 			damage = 12.0
 			damage_radius = 3.0
 			damage_once = true
 			_is_projectile = false
-			add_particle_scene(PARTICLES_SLASH)
+			add_particle_scene(PARTICLES_SLASH_HORIZ)
+		HandEffectType.VERTICAL_SLASH:
+			lifetime = 0.8
+			damage = 12.0
+			damage_radius = 3.0
+			damage_once = true
+			_is_projectile = false
+			add_particle_scene(PARTICLES_SLASH_VERT)
 	
 	super._ready()
 
