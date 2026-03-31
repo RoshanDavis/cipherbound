@@ -35,6 +35,10 @@ var _damage_timer := 0.0
 var _wander_pause_timer := 0.0
 var _health: float
 
+# --- ANIMATION ---
+var _animation_time := 0.0
+var _visual_nodes: Array[Dictionary] = []
+
 # --- GRAVITY ---
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
@@ -51,6 +55,15 @@ func _ready() -> void:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = mesh_color
 		mesh.material_override = mat
+		
+	# Store animation baselines for all mesh parts
+	for child in get_children():
+		if child is MeshInstance3D:
+			_visual_nodes.append({
+				"node": child,
+				"orig_y": child.position.y,
+				"base_scale": child.scale
+			})
 	
 	# Connect detection area signals
 	if detection_area:
@@ -60,6 +73,37 @@ func _ready() -> void:
 	# Start with a short pause before first wander
 	_wander_pause_timer = randf_range(0.5, 1.5)
 	state = State.IDLE
+
+func _process(delta: float) -> void:
+	if _visual_nodes.is_empty(): return
+	
+	_animation_time += delta
+	var target_scale := Vector3.ONE
+	var y_offset := 0.0
+	
+	match state:
+		State.IDLE:
+			# Gentle breathing
+			var breath: float = sin(_animation_time * 2.0) * 0.1
+			target_scale = Vector3(1.0 + breath, 1.0 - breath, 1.0 + breath)
+		State.WANDER:
+			# Slow bounce
+			var bounce: float = absf(sin(_animation_time * wander_speed * 1.5))
+			y_offset = bounce * 0.3
+			target_scale = Vector3(1.0 - bounce * 0.2, 1.0 + bounce * 0.4, 1.0 - bounce * 0.2)
+		State.CHASE:
+			# Fast, more erratic bounce
+			var bounce: float = absf(sin(_animation_time * chase_speed * 2.0))
+			y_offset = bounce * 0.5
+			target_scale = Vector3(1.0 - bounce * 0.3, 1.0 + bounce * 0.5, 1.0 - bounce * 0.3)
+			
+	# Lerp for smooth transitions and squish recovery on all parts
+	for data in _visual_nodes:
+		var node: MeshInstance3D = data["node"]
+		var base_scale: Vector3 = data["base_scale"]
+		var orig_y: float = data["orig_y"]
+		node.scale = node.scale.lerp(target_scale * base_scale, delta * 15.0)
+		node.position.y = lerpf(node.position.y, orig_y + y_offset, delta * 15.0)
 
 func _physics_process(delta: float) -> void:
 	# Gravity
@@ -223,6 +267,12 @@ func take_damage(amount: float) -> void:
 	"""Called when the slime takes damage from spells."""
 	_health -= amount
 	print("Slime took ", amount, " damage! HP: ", _health, "/", max_health)
+	
+	# Visual squish for all parts
+	for data in _visual_nodes:
+		var node: MeshInstance3D = data["node"]
+		var base_scale: Vector3 = data["base_scale"]
+		node.scale = Vector3(1.5, 0.4, 1.5) * base_scale
 	
 	if _health <= 0:
 		_die()

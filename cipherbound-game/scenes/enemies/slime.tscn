@@ -2,6 +2,12 @@
 
 [ext_resource type="Script" uid="uid://crjilcp8wjog8" path="res://scripts/enemies/slime.gd" id="1_rldp6"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rldp6"]
+albedo_color = Color(0, 0, 0, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ahq63"]
+material = SubResource("StandardMaterial3D_rldp6")
+
 [sub_resource type="SphereShape3D" id="SphereShape3D_body"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_slime"]
@@ -9,18 +15,20 @@
 [sub_resource type="SphereShape3D" id="SphereShape3D_detection"]
 radius = 10.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rldp6"]
-albedo_color = Color(0, 0, 0, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_ahq63"]
-material = SubResource("StandardMaterial3D_rldp6")
-
 [node name="Slime" type="CharacterBody3D"]
 collision_layer = 4
 collision_mask = 3
 script = ExtResource("1_rldp6")
 chase_speed = 3.0
 contact_damage = 1.0
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.2201152, 0, 0, 0, -0.0013306452, -0.21705416, 0, -0.0028206059, 0.10239715, 0.18173206, 0.7414812, 0.43581492)
+mesh = SubResource("CylinderMesh_ahq63")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.2201152, 0, 0, 0, -0.0013306452, -0.21705416, 0, -0.0028206059, 0.10239715, -0.11775577, 0.7414812, 0.45607507)
+mesh = SubResource("CylinderMesh_ahq63")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -40,11 +48,3 @@ monitorable = false
 
 [node name="DetectionShape" type="CollisionShape3D" parent="DetectionArea"]
 shape = SubResource("SphereShape3D_detection")
-
-[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.17984925, 0, 0, 0, 0.019794628, -0.27205047, 0, 0.041959226, 0.12834214, -0.14832711, 0.76689655, 0.40400922)
-mesh = SubResource("CylinderMesh_ahq63")
-
-[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.17984925, 0, 0, 0, 0.019794628, -0.27205047, 0, 0.041959226, 0.12834214, 0.14456719, 0.76689655, 0.40400922)
-mesh = SubResource("CylinderMesh_ahq63")

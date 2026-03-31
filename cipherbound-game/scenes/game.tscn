@@ -141,18 +141,6 @@ material = SubResource("StandardMaterial3D_wall")
 
 [node name="Obstacles" type="Node3D" parent="."]
 
-[node name="Pillar1" type="CSGCylinder3D" parent="Obstacles"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.5, -5)
-use_collision = true
-radius = 0.8
-height = 6.1
-material = SubResource("StandardMaterial3D_lbhrr")
-
-[node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar1"]
-transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, -18.03376, 0, 0)
-mesh = SubResource("ArrayMesh_iywne")
-skeleton = NodePath("")
-
 [node name="Pillar2" type="CSGCylinder3D" parent="Obstacles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5320716, 0.5, -27.269377)
 use_collision = true
@@ -161,43 +149,79 @@ height = 6.1
 material = SubResource("StandardMaterial3D_lbhrr")
 
 [node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar2"]
-transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0, 0, 0)
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
 mesh = SubResource("ArrayMesh_iywne")
 skeleton = NodePath("")
 
 [node name="Pillar3" type="CSGCylinder3D" parent="Obstacles"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.973818, 0.5, -19.113384)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.112024, 0.5, -19.405037)
 use_collision = true
 radius = 0.8
 height = 6.1
 material = SubResource("StandardMaterial3D_lbhrr")
 
 [node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar3"]
-transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0, 0, 0)
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
 mesh = SubResource("ArrayMesh_iywne")
 skeleton = NodePath("")
 
 [node name="Pillar4" type="CSGCylinder3D" parent="Obstacles"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.973818, 0.5, 16.737118)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.112024, 0.5, 14.5735855)
 use_collision = true
 radius = 0.8
 height = 6.1
 material = SubResource("StandardMaterial3D_lbhrr")
 
 [node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar4"]
-transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0, 0, 0)
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
 mesh = SubResource("ArrayMesh_iywne")
 skeleton = NodePath("")
 
 [node name="Pillar5" type="CSGCylinder3D" parent="Obstacles"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.629622, 0.5, 35.710003)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22.50591, 0.5, 21.233624)
 use_collision = true
 radius = 0.8
 height = 6.1
 material = SubResource("StandardMaterial3D_lbhrr")
 
 [node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar5"]
-transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0, 0, 0)
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
+mesh = SubResource("ArrayMesh_iywne")
+skeleton = NodePath("")
+
+[node name="Pillar6" type="CSGCylinder3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8549557, 0.5, 35.39419)
+use_collision = true
+radius = 0.8
+height = 6.1
+material = SubResource("StandardMaterial3D_lbhrr")
+
+[node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar6"]
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
+mesh = SubResource("ArrayMesh_iywne")
+skeleton = NodePath("")
+
+[node name="Pillar7" type="CSGCylinder3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.110939, 0.5, -17.328964)
+use_collision = true
+radius = 0.8
+height = 6.1
+material = SubResource("StandardMaterial3D_lbhrr")
+
+[node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar7"]
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
+mesh = SubResource("ArrayMesh_iywne")
+skeleton = NodePath("")
+
+[node name="Pillar8" type="CSGCylinder3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.625465, 0.5, -6.75268)
+use_collision = true
+radius = 0.8
+height = 6.1
+material = SubResource("StandardMaterial3D_lbhrr")
+
+[node name="Cubo_000" type="MeshInstance3D" parent="Obstacles/Pillar8"]
+transform = Transform3D(-55.85096, 42.00361, -4.1653516e-06, 0, 4.165351e-06, 69.883, 42.00361, 55.85096, -8.330703e-06, 0.40902883, 4.0561957e-08, 0.54387355)
 mesh = SubResource("ArrayMesh_iywne")
 skeleton = NodePath("")
 
