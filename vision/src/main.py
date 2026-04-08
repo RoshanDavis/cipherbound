@@ -29,6 +29,36 @@ def _signal_handler(signum, frame):
     _shutdown_requested = True
 
 
+def switch_camera(current_cap, current_id, max_probe=10):
+    """
+    Try to open the next available camera.
+    Probes indices (current_id+1) through (current_id+max_probe), wrapping around.
+    Returns (new_cap, new_id) on success, or (current_cap, current_id) if no other camera found.
+    """
+    for offset in range(1, max_probe + 1):
+        candidate = (current_id + offset) % max_probe
+        print(f"Probing camera {candidate}...")
+        test_cap = cv2.VideoCapture(candidate)
+        if test_cap.isOpened():
+            ret, frame = test_cap.read()
+            if ret and frame is not None:
+                # Found a working camera — configure it
+                test_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                test_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                test_cap.set(cv2.CAP_PROP_FPS, 30)
+                test_cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                h, w = frame.shape[:2]
+                print(f"Switched to camera {candidate}: {w}x{h}")
+                current_cap.release()
+                return test_cap, candidate
+            else:
+                test_cap.release()
+        else:
+            test_cap.release()
+    print("No other camera found — staying on current camera.")
+    return current_cap, current_id
+
+
 def main():
     """
     Run the vision processing loop: capture frames from the configured webcam,
@@ -42,7 +72,7 @@ def main():
 
     print("--- CIPHERBOUND VISION SERVER ---")
     print(f"Target: {UDP_IP}:{UDP_PORT}")
-    print("Press 'ESC' to quit, 'R' to recalibrate")
+    print("Press 'ESC' to quit, 'R' to recalibrate, 'C' to switch camera")
     
     # Init modules
     if os.name == 'nt' or not hasattr(signal, 'SIGKILL'):
@@ -53,12 +83,13 @@ def main():
     print()
     
     # --- CAMERA SETUP ---
-    print(f"Opening camera {WEBCAM_ID}...")
-    cap = cv2.VideoCapture(WEBCAM_ID)
+    current_camera_id = WEBCAM_ID
+    print(f"Opening camera {current_camera_id}...")
+    cap = cv2.VideoCapture(current_camera_id)
     
     if not cap.isOpened():
-        print(f"ERROR: Could not open camera {WEBCAM_ID}")
-        print("Try changing WEBCAM_ID in config.py (0, 1, 2, etc.)")
+        print(f"ERROR: Could not open camera {current_camera_id}")
+        print("Try changing WEBCAM_ID in config.py or press 'C' to switch cameras")
         return
     
     # Configure camera for better performance
@@ -266,7 +297,8 @@ def main():
         if DEBUG_MODE:
             draw_debug(image, results, data_packet, 
                       look_tracker, strafe_tracker, depth_tracker,
-                      body_offset, mp_holistic, hand_tracker, gesture_tracker)
+                      body_offset, mp_holistic, hand_tracker, gesture_tracker,
+                      current_camera_id)
             
             cv2.imshow('Cipherbound Vision Eye', image)
             key = cv2.waitKey(5) & 0xFF
@@ -278,10 +310,24 @@ def main():
                 strafe_tracker.reset_calibration()
                 depth_tracker.reset_calibration()
                 print("Recalibrating...")
+            elif key == ord('c') or key == ord('C'):
+                cap, current_camera_id = switch_camera(cap, current_camera_id)
+                # Recalibrate trackers for the new camera perspective
+                look_tracker.reset_calibration()
+                strafe_tracker.reset_calibration()
+                depth_tracker.reset_calibration()
+                print("Trackers recalibrated for new camera.")
         else:
             # Non-debug mode: check for keyboard interrupt periodically
-            if cv2.waitKey(1) & 0xFF == 27:
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27:
                 break
+            elif key == ord('c') or key == ord('C'):
+                cap, current_camera_id = switch_camera(cap, current_camera_id)
+                look_tracker.reset_calibration()
+                strafe_tracker.reset_calibration()
+                depth_tracker.reset_calibration()
+                print("Trackers recalibrated for new camera.")
     
     # Cleanup
     print("Shutting down...")
@@ -292,7 +338,7 @@ def main():
     print("Done.")
 
 
-def draw_debug(image, results, data_packet, look_tracker, strafe_tracker, depth_tracker, body_offset, mp_holistic, hand_tracker=None, gesture_tracker=None):
+def draw_debug(image, results, data_packet, look_tracker, strafe_tracker, depth_tracker, body_offset, mp_holistic, hand_tracker=None, gesture_tracker=None, camera_id=0):
     """
     Render debug overlays onto the provided BGR image showing calibration progress and visualizations for face, look, depth, body, and hand tracking.
     
@@ -329,7 +375,7 @@ def draw_debug(image, results, data_packet, look_tracker, strafe_tracker, depth_
                    (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
         cv2.putText(image, f"Depth: {data_packet['lean_y']:.2f}", 
                    (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 200, 0), 1)
-        cv2.putText(image, "Press 'R' to recalibrate", 
+        cv2.putText(image, f"Cam {camera_id} | 'R' recalibrate | 'C' switch camera", 
                    (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
     
     # --- FACE VISUALIZATION ---
