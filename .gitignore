@@ -8,6 +8,11 @@ __pycache__/
 venv/
 *.pyc
 
+# PyInstaller
+dist/
+build/
+*.spec.warn
+
 # IDEs
 .vscode/
 .idea/
